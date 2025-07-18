@@ -91,6 +91,8 @@ int hungarian_init(hungarian_problem_t* p, double** cost_matrix, int rows, int c
   hungarian_test_alloc(p->cost);
   p->assignment = (int**)calloc(rows,sizeof(int*));
   hungarian_test_alloc(p->assignment);
+  p->successors = (int*)calloc(rows,sizeof(int));
+  hungarian_test_alloc(p->successors);
 
   for(i=0; i<p->num_rows; i++) {
     p->cost[i] = (int*)calloc(cols,sizeof(int));
@@ -388,6 +390,7 @@ int hungarian_solve(hungarian_problem_t* p)
   for (i=0;i<m;++i)
     {
       p->assignment[i][col_mate[i]]=HUNGARIAN_ASSIGNED;
+      p->successors[i] = col_mate[i];
       /*TRACE("%d - %d\n", i, col_mate[i]);*/
     }
   for (k=0;k<m;++k)

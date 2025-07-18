@@ -17,36 +17,38 @@ struct Node {
 
 void findSubtours(hungarian_problem_t *p, Data *data, Node* node) {
 	vector<int> disjointedSets = vector<int>(data->getDimension());
-	vector<int> successors = vector<int>(data->getDimension());
 
 	for (size_t i = 0; i < disjointedSets.size(); i++)
 		disjointedSets[i] = i;
-	for (size_t i = 0; i < disjointedSets.size(); i++) { // TODO: this can be done in O(n) instead of O(n^2)
-		for (size_t j = 0; j < disjointedSets.size(); j++) {
-			if (p->assignment[i][j] == 1) {
-				disjointedSets[j] = disjointedSets[i]; // TODO: double-check correctness of this
-				successors[i] = j;
-			}
-		}
+	for (size_t i = 0; i < disjointedSets.size(); i++) {
+		disjointedSets[p->successors[i]] = disjointedSets[i]; // TODO: double-check correctness of this
 	}
+	// for (size_t i = 0; i < disjointedSets.size(); i++) { // TODO: this can be done in O(n) instead of O(n^2)
+	// 	for (size_t j = 0; j < disjointedSets.size(); j++) {
+	// 		if (p->assignment[i][j] == 1) {
+	// 			disjointedSets[j] = disjointedSets[i]; // TODO: double-check correctness of this
+	// 			successors[i] = j;
+	// 		}
+	// 	}
+	// }
 	unordered_map<int, size_t> subtoursSizes;
 	for (size_t i = 0; i < disjointedSets.size(); i++) {
 		if (subtoursSizes.contains(disjointedSets[i]))
 			subtoursSizes[disjointedSets[i]]++;
 		else
-			subtoursSizes.insert(disjointedSets[i], 1);
+			subtoursSizes.emplace(disjointedSets[i], 1);
 	}
 	size_t smallest = disjointedSets.size() + 1;
 	for (auto it = subtoursSizes.cbegin(); it != subtoursSizes.cend(); it++) {
 		if ((*it).second < smallest) {
-			node->chosen == (*it).first;
+			node->chosen = node->subtours.size();
 			smallest = (*it).second;
 		}
 		node->subtours.push_back(vector<int>());
 		int idx = (*it).first;
 		do {
 			node->subtours.back().push_back(idx);
-			idx = successors[idx];
+			idx = p->successors[idx];
 		} while(idx != (*it).first);
 	}
 	if (smallest < disjointedSets.size())
@@ -60,7 +62,7 @@ void hungarian(hungarian_problem_t *p, Data *data, double **cost, Node* node) {
 		p->cost[(*node).forbidden_arcs[idx].first][(*node).forbidden_arcs[idx].second] = 99999999;
 	
 	node->lower_bound = hungarian_solve(p);
-	
+
 	// cout << "Obj. value: " << obj_value << endl;
 	
 	// cout << "Assignment" << endl;
@@ -90,7 +92,7 @@ int main(int argc, char** argv) {
 	while (!tree.empty()) {
 		auto node = tree.begin();
 		hungarian_problem_t p;
-		vector<vector<int>> subtour = getSolutionHungarian(*node);
+		findSubtours(&p, data, &(*node));
 
 		if (node->lower_bound > upper_bound) {
 			tree.erase(node);
@@ -100,12 +102,12 @@ int main(int argc, char** argv) {
 		if (node->feasible)
 			upper_bound = min(upper_bound, node->lower_bound);
 		else {
-			for (int i = 0; i < node.subtour[root.chosen].size() - 1; i++) {
+			for (size_t i = 0; i < node->subtours[root.chosen].size() - 1; i++) {
 				Node n;
-				n.arcos_proibidos = raiz.arcos_proibidos;
+				n.forbidden_arcs = node->forbidden_arcs;
 				std::pair<int,int> forbidden_arc = {
-					node.subtour[root.chosen][i],
-					node.subtour[root.chosen][i + 1]
+					node->subtours[root.chosen][i],
+					node->subtours[root.chosen][i + 1]
 				};
 				n.forbidden_arcs.push_back(forbidden_arc);
 				tree.push_back(n);

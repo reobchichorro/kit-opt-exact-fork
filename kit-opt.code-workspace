@@ -6,7 +6,10 @@
 	],
 	"settings": {
 		"files.associations": {
-			"limits": "cpp"
+			"limits": "cpp",
+			"array": "cpp",
+			"string_view": "cpp",
+			"initializer_list": "cpp"
 		}
 	}
 }
