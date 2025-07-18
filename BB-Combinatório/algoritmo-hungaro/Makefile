@@ -2,7 +2,7 @@
 CXX = g++
 
 # Compiler flags
-CXXFLAGS = -I ./ -std=c++11 -Wall -I -O3 -g
+CXXFLAGS = -I ./ -std=c++20 -Wall -I -O3 -g
 LDFLAGS =
 
 # Source and object files

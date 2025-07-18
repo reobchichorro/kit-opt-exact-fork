@@ -5,17 +5,52 @@ using namespace std;
 #include "hungarian.h"
 #include <vector>
 #include <list>
+#include <unordered_map>
 
 struct Node {
-	vector<pair<int, int>> forbidden_arcs;
-	vector<vector<int>> subtour;
+	vector<pair<int, int>> forbidden_arcs = vector<pair<int,int>>();
+	vector<vector<int>> subtours = vector<vector<int>>();
 	double lower_bound; // cost of hungarian solution
-	int chosen; // index of the smallest subtours
-	bool feasible;
+	int chosen = -1; // index of the smallest subtours
+	bool feasible = true;
 };
 
 void findSubtours(hungarian_problem_t *p, Data *data, Node* node) {
-	
+	vector<int> disjointedSets = vector<int>(data->getDimension());
+	vector<int> successors = vector<int>(data->getDimension());
+
+	for (size_t i = 0; i < disjointedSets.size(); i++)
+		disjointedSets[i] = i;
+	for (size_t i = 0; i < disjointedSets.size(); i++) { // TODO: this can be done in O(n) instead of O(n^2)
+		for (size_t j = 0; j < disjointedSets.size(); j++) {
+			if (p->assignment[i][j] == 1) {
+				disjointedSets[j] = disjointedSets[i]; // TODO: double-check correctness of this
+				successors[i] = j;
+			}
+		}
+	}
+	unordered_map<int, size_t> subtoursSizes;
+	for (size_t i = 0; i < disjointedSets.size(); i++) {
+		if (subtoursSizes.contains(disjointedSets[i]))
+			subtoursSizes[disjointedSets[i]]++;
+		else
+			subtoursSizes.insert(disjointedSets[i], 1);
+	}
+	size_t smallest = disjointedSets.size() + 1;
+	for (auto it = subtoursSizes.cbegin(); it != subtoursSizes.cend(); it++) {
+		if ((*it).second < smallest) {
+			node->chosen == (*it).first;
+			smallest = (*it).second;
+		}
+		node->subtours.push_back(vector<int>());
+		int idx = (*it).first;
+		do {
+			node->subtours.back().push_back(idx);
+			idx = successors[idx];
+		} while(idx != (*it).first);
+	}
+	if (smallest < disjointedSets.size())
+		node->feasible = false;
 }
 
 void hungarian(hungarian_problem_t *p, Data *data, double **cost, Node* node) {
@@ -24,7 +59,8 @@ void hungarian(hungarian_problem_t *p, Data *data, double **cost, Node* node) {
 	for (size_t idx = 0; idx < node->forbidden_arcs.size(); idx++)
 		p->cost[(*node).forbidden_arcs[idx].first][(*node).forbidden_arcs[idx].second] = 99999999;
 	
-	double obj_value = hungarian_solve(p);
+	node->lower_bound = hungarian_solve(p);
+	
 	// cout << "Obj. value: " << obj_value << endl;
 	
 	// cout << "Assignment" << endl;
