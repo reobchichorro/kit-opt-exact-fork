@@ -136,8 +136,10 @@ void hungarian_free(hungarian_problem_t* p) {
   }
   free(p->cost);
   free(p->assignment);
+  free(p->successors);
   p->cost = NULL;
   p->assignment = NULL;
+  p->successors = NULL;
 }
 
 

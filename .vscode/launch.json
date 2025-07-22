@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/BB-Combinatório/algoritmo-hungaro/solve.out",
-            "args": ["${workspaceFolder}/instances/burma14.tsp", "2>", "${workspaceFolder}/MYMLP/errDebug.txt"],
+            "args": ["${workspaceFolder}/GILS-RVND-TSP/leitor-instancias/instances/burma5.tsp", "2>", "${workspaceFolder}/BB-Combinatório/algoritmo-hungaro/errDebug.txt"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],

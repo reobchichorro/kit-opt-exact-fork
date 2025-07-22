@@ -53,6 +53,7 @@ void findSubtours(hungarian_problem_t *p, Data *data, Node* node) {
 	}
 	if (smallest < disjointedSets.size())
 		node->feasible = false;
+	hungarian_free(p);
 }
 
 void hungarian(hungarian_problem_t *p, Data *data, double **cost, Node* node) {
@@ -67,8 +68,6 @@ void hungarian(hungarian_problem_t *p, Data *data, double **cost, Node* node) {
 	
 	// cout << "Assignment" << endl;
 	// hungarian_print_assignment(p);
-
-	hungarian_free(p);
 }
 
 int main(int argc, char** argv) {
@@ -87,33 +86,53 @@ int main(int argc, char** argv) {
 	Node root;
 	list<Node> tree;
 	tree.push_back(root);
-	double upper_bound = numeric_limits<double>::infinity();
-
-	while (!tree.empty()) {
-		auto node = tree.begin();
+	double upper_bound = 99999998; //numeric_limits<double>::infinity();
+	double lower_bound = 0;
+	int count = 0;
+	int itmax = 100000;
+	while (!tree.empty() && count < itmax) {
+		count++;
+		Node node = tree.front();
+		tree.pop_front();
 		hungarian_problem_t p;
-		findSubtours(&p, data, &(*node));
+		hungarian(&p, data, cost, &(node));
+		findSubtours(&p, data, &(node));
 
-		if (node->lower_bound > upper_bound) {
-			tree.erase(node);
+		if (node.lower_bound > upper_bound) {
+			// tree.erase(node);
 			continue;
 		}
 
-		if (node->feasible)
-			upper_bound = min(upper_bound, node->lower_bound);
+		if (node.feasible) {
+			upper_bound = min(upper_bound, node.lower_bound);
+			// lower_bound = max(lower_bound, node.lower_bound);
+			cerr << node.feasible << " " << node.lower_bound << " " << upper_bound << " " << node.forbidden_arcs.size() << "\n";
+		}
 		else {
-			for (size_t i = 0; i < node->subtours[root.chosen].size() - 1; i++) {
+			for (size_t i = 0; i < node.subtours[node.chosen].size() - 1; i++) {
 				Node n;
-				n.forbidden_arcs = node->forbidden_arcs;
+				n.forbidden_arcs = node.forbidden_arcs;
 				std::pair<int,int> forbidden_arc = {
-					node->subtours[root.chosen][i],
-					node->subtours[root.chosen][i + 1]
+					node.subtours[node.chosen][i],
+					node.subtours[node.chosen][i + 1]
 				};
 				n.forbidden_arcs.push_back(forbidden_arc);
 				tree.push_back(n);
 			}
+			Node n;
+			n.forbidden_arcs = node.forbidden_arcs;
+			std::pair<int,int> forbidden_arc = {
+				node.subtours[node.chosen][node.subtours[node.chosen].size() - 1],
+				node.subtours[node.chosen][0]
+			};
+			n.forbidden_arcs.push_back(forbidden_arc);
+			tree.push_back(n);
 		}
+		if (count % (itmax/100) == 0)
+			cerr << node.feasible << " " << node.subtours[node.chosen].size() << " " << node.lower_bound << " " << upper_bound << " " << node.forbidden_arcs.size() << "\n";
+		// tree.erase(node);
 	}
+	cerr << count << endl;
 	
 	for (int i = 0; i < data->getDimension(); i++) delete [] cost[i];
 	delete [] cost;
