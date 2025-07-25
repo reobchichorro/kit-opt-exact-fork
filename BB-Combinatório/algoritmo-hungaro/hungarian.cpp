@@ -104,7 +104,7 @@ int hungarian_init(hungarian_problem_t* p, double** cost_matrix, int rows, int c
       p->assignment[i][j] = 0;
 
       if (max_cost < p->cost[i][j])
-	max_cost = p->cost[i][j];
+	      max_cost = p->cost[i][j];
     }
   }
 
@@ -112,7 +112,7 @@ int hungarian_init(hungarian_problem_t* p, double** cost_matrix, int rows, int c
   if (mode == HUNGARIAN_MODE_MAXIMIZE_UTIL) {
     for(i=0; i<p->num_rows; i++) {
       for(j=0; j<p->num_cols; j++) {
-	p->cost[i][j] =  max_cost - p->cost[i][j];
+	      p->cost[i][j] =  max_cost - p->cost[i][j];
       }
     }
   }
@@ -125,6 +125,47 @@ int hungarian_init(hungarian_problem_t* p, double** cost_matrix, int rows, int c
   return rows;
 }
 
+void hungarian_reset(hungarian_problem_t* p, double** cost_matrix, int rows, int cols, int mode) {
+
+  int i,j, org_cols, org_rows;
+  int max_cost;
+  max_cost = 0;
+  
+  org_cols = cols;
+  org_rows = rows;
+
+  // is the number of cols  not equal to number of rows ? 
+  // if yes, expand with 0-cols / 0-cols
+  rows = hungarian_imax(cols, rows);
+  cols = rows;
+  
+  p->num_rows = rows;
+  p->num_cols = cols;
+
+  for(i=0; i<p->num_rows; i++) {
+    for(j=0; j<p->num_cols; j++) {
+      p->cost[i][j] =  (i < org_rows && j < org_cols) ? cost_matrix[i][j] : 0;
+      p->assignment[i][j] = 0;
+
+      if (max_cost < p->cost[i][j])
+	      max_cost = p->cost[i][j];
+    }
+  }
+
+
+  if (mode == HUNGARIAN_MODE_MAXIMIZE_UTIL) {
+    for(i=0; i<p->num_rows; i++) {
+      for(j=0; j<p->num_cols; j++) {
+	      p->cost[i][j] =  max_cost - p->cost[i][j];
+      }
+    }
+  }
+  else if (mode == HUNGARIAN_MODE_MINIMIZE_COST) {
+    // nothing to do
+  }
+  else 
+    fprintf(stderr,"%s: unknown mode. Mode was set to HUNGARIAN_MODE_MINIMIZE_COST !\n", __FUNCTION__);
+}
 
 
 

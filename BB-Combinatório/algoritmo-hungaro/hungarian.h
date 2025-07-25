@@ -52,6 +52,12 @@ int hungarian_init(hungarian_problem_t* p,
 		   int rows, 
 		   int cols, 
 		   int mode);
+
+void hungarian_reset(hungarian_problem_t* p, 
+		   double** cost_matrix, 
+		   int rows, 
+		   int cols, 
+		   int mode);
   
 /** Free the memory allocated by init. **/
 void hungarian_free(hungarian_problem_t* p);
