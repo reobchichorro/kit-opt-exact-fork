@@ -17,19 +17,19 @@ class Kruskal{
 public:
 	Kruskal(vvi dist);
 
-	double MST(int nodes);
+	double MST(size_t nodes);
 	vii getEdges();
+	vii edges;
 
 
 private:
 	priority_queue <pair<double,ii> > graph;
-	vector <int> pset;
-	vii edges;
+	vector <size_t> pset;
 
-	void initDisjoint(int n);
-	int findSet(int i);
-	void unionSet(int i, int j);
-	bool isSameSet(int i, int j);
+	void initDisjoint(size_t n);
+	size_t findSet(size_t i);
+	void unionSet(size_t i, size_t j);
+	bool isSameSet(size_t i, size_t j);
 };
 
 #endif

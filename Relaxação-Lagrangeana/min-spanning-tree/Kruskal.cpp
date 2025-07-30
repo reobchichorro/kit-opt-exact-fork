@@ -1,29 +1,29 @@
 #include "Kruskal.h"
 
 Kruskal::Kruskal(vvi dist){
-	for(int i = 0; i < dist.size(); ++i){
-		for(int j = 0; j < dist[i].size(); ++j){
+	for(size_t i = 0; i < dist.size(); ++i){
+		for(size_t j = i+1; j < dist[i].size(); ++j){
 			graph.push( make_pair(-dist[i][j], make_pair(i, j)) );
 		}	
 	}
 }
 
-void Kruskal::initDisjoint(int n){
+void Kruskal::initDisjoint(size_t n){
 	pset.resize(n);
-	for (int i = 0; i < n; ++i){
+	for (size_t i = 0; i < n; ++i){
 		pset[i] = i;
 	}
 }
 
-int Kruskal::findSet(int i){
+size_t Kruskal::findSet(size_t i){
 	return (pset[i] == i) ? i : (pset[i] = findSet(pset[i]));
 }
 
-void Kruskal::unionSet(int i, int j){
+void Kruskal::unionSet(size_t i, size_t j){
 	pset[findSet(i)] = findSet(j);
 }
 
-bool Kruskal::isSameSet(int i, int j){
+bool Kruskal::isSameSet(size_t i, size_t j){
 	return (findSet(i) == findSet(j))? true:false;
 }
 
@@ -31,7 +31,7 @@ vii Kruskal::getEdges(){
 	return edges;
 }
 
-double Kruskal::MST(int nodes){
+double Kruskal::MST(size_t nodes){
 	initDisjoint(nodes);
 
 	double cost = 0;
