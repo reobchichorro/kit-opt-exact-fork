@@ -3,6 +3,7 @@
 #include <list>
 #include <unordered_set>
 #include <unordered_map>
+#include <queue>
 
 #include "data.h"
 #include "hungarian.h"
@@ -10,6 +11,7 @@
 using namespace std;
 #define EPS 1e-6
 #define MAX_TREE_SIZE 1e+6
+#define BRANCHING 2 // 0 for DFS, 1 for BFS, 2 for LB
 
 int n = -1;
 
@@ -81,19 +83,6 @@ void findSubtours(hungarian_problem_t *p, Data *data, Node* node) {
 	}
 	int chosen = -1;
 	size_t smallest = disjointedSets.size() + 1;
-	// for (auto it = subtoursSizes.cbegin(); it != subtoursSizes.cend(); it++) {
-	// 	node->biggest = max((*it).second, node->biggest);
-	// 	if ((*it).second < smallest) {
-	// 		node->chosen = node->subtours.size();
-	// 		smallest = (*it).second;
-	// 	}
-	// 	node->subtours.push_back(vector<int>());
-	// 	int idx = (*it).first;
-	// 	do {
-	// 		node->subtours.back().push_back(idx);
-	// 		idx = p->successors[idx];
-	// 	} while(idx != (*it).first);
-	// }
 	for (auto it = subtoursSizes.cbegin(); it != subtoursSizes.cend(); it++) {
 		if ((*it).second < smallest) {
 			chosen = (*it).first;
@@ -118,26 +107,6 @@ void hungarian(hungarian_problem_t *p, Data *data, double **cost, Node* node) {
 		p->cost[(*node).forbidden_arcs[idx].first][(*node).forbidden_arcs[idx].second] = 99999999;
 		// p->cost[(*node).forbidden_arcs[idx].second][(*node).forbidden_arcs[idx].first] = 99999999;
 	}
-
-	// for (int i = 0; i < data->getDimension(); i++) {
-	// 	for (int j = 0; j < data->getDimension(); j++) {
-	// 		p->cost[i][j] = node->forbidden_arcs[i][j]*99999999 + (1-node->forbidden_arcs[i][j])*p->cost[i][j];
-	// 	}
-	// }
-
-	// for (int i = 0; i < data->getDimension(); i++) {
-	// 	for (int j = 0; j < data->getDimension(); j++) {
-	// 		cerr << node->forbidden_arcs[i][j] << "\t";
-	// 	}
-	// 	cerr << "\n";
-	// }
-
-	// for (int i = 0; i < data->getDimension(); i++) {
-	// 	for (int j = 0; j < data->getDimension(); j++) {
-	// 		cerr << p->cost[i][j] << "\t";
-	// 	}
-	// 	cerr << "\n";
-	// }
 	
 	node->lower_bound = hungarian_solve(p);
 	
@@ -169,27 +138,36 @@ int main(int argc, char** argv) {
 
 	Node root;
 	root.forbidden_arcs = vector<pair<int,int>>(); //vector<vector<bool>>(data->getDimension(), vector<bool>(data->getDimension(), 0));
+
 	list<Node> tree;
 	tree.push_back(root);
+	auto cmp = [](Node& a, Node&b){ return a.lower_bound < b.lower_bound; };
+	priority_queue<Node, deque<Node>, decltype(cmp)> pq_tree(cmp);
+	pq_tree.push(root);
+	
 	double upper_bound = createInitialSolution(data, cost);//99999998; //numeric_limits<double>::infinity();
 	cout << upper_bound << endl;
 	hungarian_problem_t p;
 	hungarian_init(&p, cost, data->getDimension(), data->getDimension(), HUNGARIAN_MODE_MINIMIZE_COST); // Carregando o problema
-	
-	// upper_bound = 4000;
-	// unordered_set<Sol> visited;
-	// unordered_map<double, int> visitedNumb;
-	// unordered_map<double, int> visitedNumbLimits;
 
 	int count = 0;
 	long long int itmax = 100000000;
-	// size_t curr_biggest = 0;
-	// size_t max_forbidden = data->getDimension()*(data->getDimension()-1)/2 - data->getDimension();
 	size_t tree_size = 1;
 
-	while (!tree.empty() && count < itmax && tree_size < MAX_TREE_SIZE) {
-		Node node = tree.back();
-		tree.pop_back();
+	while ((BRANCHING == 2 ? !pq_tree.empty() : !tree.empty()) && count < itmax && tree_size < MAX_TREE_SIZE) {
+		Node node;
+		if (BRANCHING == 0) {
+			node = tree.back();
+			tree.pop_back();
+		}
+		else if (BRANCHING == 1) {
+			node = tree.front();
+			tree.pop_front();
+		}
+		else if (BRANCHING == 2) {
+			node = pq_tree.top();
+			pq_tree.pop();
+		}
 		tree_size--;
 		// Sol solution;
 		hungarian(&p, data, cost, &(node));
@@ -210,22 +188,6 @@ int main(int argc, char** argv) {
 			continue;
 		}
 
-		// if (visitedNumb.contains(node.lower_bound))
-		// 	visitedNumb[node.lower_bound]++;
-		// else {
-		// 	visitedNumb[node.lower_bound] = 1;
-		// 	visitedNumbLimits[node.lower_bound] = 1;
-		// }
-
-		// if (node.biggest > curr_biggest) {
-		// 	curr_biggest = node.biggest;
-		// 	cerr << node.feasible << " " << node.subtours[node.chosen].size() << " " << curr_biggest << " " << node.lower_bound << " " << upper_bound << " " << node.forbidden_arcs.size() << "\n";
-		// }
-		// if (node.forbidden_arcs.size() > max_forbidden) {
-		// 	cerr << "Forbidden: " << node.feasible << " " << node.chosen_subtour.size() << " " << curr_biggest << " " << node.lower_bound << " " << upper_bound << " " << node.forbidden_arcs.size() << "\n";
-		// 	continue;
-		// }
-
 		if (node.feasible) {
 			if (node.lower_bound < upper_bound + EPS) {
 				for (int i = 0; i < data->getDimension(); i++) {
@@ -240,54 +202,33 @@ int main(int argc, char** argv) {
 		else {
 			for (size_t i = 0; i < node.chosen_subtour.size() - 1; i++) {
 				Node n;
+				n.lower_bound = node.lower_bound;
 				n.forbidden_arcs = node.forbidden_arcs;
-				// n.forbidden_arcs[
-				// 	node.chosen_subtour[i]
-				// ][
-				// 	node.chosen_subtour[i + 1]
-				// ] = 1;
-				// if (node.chosen_subtour.size() > 2) {
-				// n.forbidden_arcs[
-				// 	node.chosen_subtour[i + 1]
-				// ][
-				// 	node.chosen_subtour[i]
-				// ] = 1;
-				// }
 				n.forbidden_arcs.push_back({
 					node.chosen_subtour[i],
 					node.chosen_subtour[i + 1]
 				});
-				// n.forbidden_arcs.push_back({
-				// 	node.chosen_subtour[i + 1],
-				// 	node.chosen_subtour[i]
-				// });
-				tree.push_back(n);
+				if (BRANCHING == 0 || BRANCHING == 1) {
+					tree.push_back(n);
+				}
+				else if (BRANCHING == 2) {
+					pq_tree.push(n);
+				}
 			}
-			tree_size += node.chosen_subtour.size();// - 1;
-			// if (node.chosen_subtour.size() > 2 || true) {
+			tree_size += node.chosen_subtour.size();
 			Node n;
+			n.lower_bound = node.lower_bound;
 			n.forbidden_arcs = node.forbidden_arcs;
-			// n.forbidden_arcs[
-			// 	node.chosen_subtour[node.chosen_subtour.size() - 1]
-			// ][
-			// 	node.chosen_subtour[0]
-			// ] = 1;
-			// n.forbidden_arcs[
-			// 	node.chosen_subtour[0]
-			// ][
-			// 	node.chosen_subtour[node.chosen_subtour.size() - 1]
-			// ] = 1;
 			n.forbidden_arcs.push_back({
 				node.chosen_subtour[node.chosen_subtour.size() - 1],
 				node.chosen_subtour[0]
 			});
-			// n.forbidden_arcs.push_back({
-			// 	node.chosen_subtour[0],
-			// 	node.chosen_subtour[node.chosen_subtour.size() - 1]
-			// });
-			tree.push_back(n);
-			//tree_size++;
-			// }
+			if (BRANCHING == 0 || BRANCHING == 1) {
+				tree.push_back(n);
+			}
+			else if (BRANCHING == 2) {
+				pq_tree.push(n);
+			}
 		}
 	}
 	cout << count << " " << upper_bound << " " << tree_size << endl;
