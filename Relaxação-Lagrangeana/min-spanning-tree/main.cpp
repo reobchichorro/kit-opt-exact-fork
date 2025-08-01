@@ -10,7 +10,9 @@
 
 using namespace std;
 #define EPS 1e-6
+#define MINEPS 1e-3
 #define MAX_TREE_SIZE 1e+6
+#define KMAX 30
 
 struct Node {
 	double lower_bound; // cost of MST
@@ -51,16 +53,6 @@ int main(int argc, char** argv) {
 
 	Data* data = new Data(argc, argv[1]);
 	data->readData();
-
-	// double **cost = new double*[data->getDimension()];
-	// for (int i = 0; i < data->getDimension(); i++) {
-	// 	cost[i] = new double[data->getDimension()];
-	// 	for (int j = 0; j < data->getDimension(); j++) {
-	// 		cost[i][j] = data->getDistance(i,j);
-	// 		cerr << cost[i][j] << "\t";
-	// 	}
-	// 	cerr << "\n";
-	// }
 	
 	vector<vector<double>> og_cost(data->getDimension(), vector<double>(data->getDimension()));
 	vector<vector<double>> cost(data->getDimension(), vector<double>(data->getDimension()));
@@ -80,8 +72,6 @@ int main(int argc, char** argv) {
 
 	int count = 0;
 	long long int itmax = 100000000;
-	// size_t curr_biggest = 0;
-	// size_t max_forbidden = data->getDimension()*(data->getDimension()-1)/2 - data->getDimension();
 	size_t tree_size = 1;
 
 	vector<double> lambda(data->getDimension(), 0);
@@ -96,7 +86,6 @@ int main(int argc, char** argv) {
 		// Node node = tree.back();
 		// tree.pop_back();
 		// tree_size--;
-		// Sol solution;
 		feasible = true;
 		for (int i = 0; i < data->getDimension(); i++) {
 			for (int j = 0; j < data->getDimension(); j++) {
@@ -115,21 +104,22 @@ int main(int argc, char** argv) {
 			this_lower_bound += og_cost[kr.edges[i].first][kr.edges[i].second];
 		}
 
-		modG = 0;
-		for (size_t i = 0; i < g.size(); i++) {
-			modG += g[i]*g[i];
-		}
-		double modGG = sqrt(accumulate(g.cbegin(), g.cend(), 0, [](int a, int b){ return a + b*b; }));
+		modG = sqrt(accumulate(g.cbegin(), g.cend(), 0, [](int a, int b){ return a + b*b; }));
 
-		mi = epsilon*(upper_bound - this_lower_bound)/modGG;
+		mi = epsilon*(upper_bound - mst_sol)/modG;
 
+		cerr << mst_sol << "\t" << this_lower_bound << "\t" << lower_bound << "\t" << upper_bound << "\n";
 		for (size_t i = 0; i < lambda.size(); i++) {
 			lambda[i] += mi*g[i];
 			cerr << lambda[i] << " ";
 		}
-		int sum = accumulate(g.cbegin(), g.cend(), 0, [](int a, int b){ return a + abs(b); });
-		cerr << sum << "\n";
-		feasible = sum == 0;
+		cerr << epsilon << "\n";
+		for (size_t i = 0; i < g.size(); i++) {
+			cerr << g[i] << " ";
+		}
+		// int sum = accumulate(g.cbegin(), g.cend(), 0, [](int a, int b){ return a + abs(b); });
+		cerr << modG << "\n";
+		feasible = modG < EPS;
 
 		// if (count % 500000 == 0) {
 		// 	// for (int i = 0; i < data->getDimension(); i++) {
@@ -141,17 +131,16 @@ int main(int argc, char** argv) {
 		// count++;
 
 		// if (this_lower_bound > upper_bound - EPS) {
-		// 	// tree.erase(node);
 		// 	break;
 		// }
 
-		if (mst_sol > lower_bound) {
+		if (mst_sol > lower_bound + EPS) {
 			lower_bound = mst_sol;
 			k = 0;
 		}
 		else {
 			k++;
-			if (k >= 10) {
+			if (k >= KMAX) {
 				k = 0;
 				epsilon /= 2;
 			}
@@ -168,20 +157,6 @@ int main(int argc, char** argv) {
 				// cerr << count << " c " << node.feasible << " " << node.lower_bound << " " << upper_bound << " " << node.forbidden_arcs.size() << "\n";
 			}
 		}
-		// else {
-		// 	for (size_t i = 0; i < node.chosen_subtour.size() - 1; i++) {
-		// 		Node n;
-
-		// 		tree.push_back(n);
-		// 	}
-		// 	tree_size += node.chosen_subtour.size();// - 1;
-		// 	// if (node.chosen_subtour.size() > 2 || true) {
-		// 	Node n;
-
-		// 	tree.push_back(n);
-		// 	//tree_size++;
-		// 	// }
-		// }
 	}
 	cout << count << " " << upper_bound << " " << tree_size << endl;
 
