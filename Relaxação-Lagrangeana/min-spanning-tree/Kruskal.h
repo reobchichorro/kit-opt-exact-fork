@@ -10,21 +10,26 @@
 using namespace std;
 
 typedef pair<int, int> ii;
-typedef vector <vector<double> >vvi;
+typedef vector<vector<double>> vvi;
 typedef vector<ii> vii;
+
+#define USE_ZERO 0
+#define TWO_CLOSEST 1
 
 class Kruskal{
 public:
-	Kruskal(vvi dist);
+	Kruskal(vvi dist, int zero_setup);
 
 	double MST(size_t nodes);
 	vii getEdges();
 	vii edges;
 
+	int zero_setup;
 
 private:
 	priority_queue <pair<double,ii> > graph;
 	vector <size_t> pset;
+	vector<double> zero_edges;
 
 	void initDisjoint(size_t n);
 	size_t findSet(size_t i);

@@ -3,6 +3,7 @@
 #include <list>
 #include <unordered_set>
 #include <unordered_map>
+#include <numeric>
 
 #include "data.h"
 #include "Kruskal.h"
@@ -12,7 +13,7 @@ using namespace std;
 #define MAX_TREE_SIZE 1e+6
 
 struct Node {
-	double lower_bound; // cost of hungarian solution
+	double lower_bound; // cost of MST
 	bool feasible = true;
 };
 
@@ -103,26 +104,32 @@ int main(int argc, char** argv) {
 			}
 		}
 
-		Kruskal kr(cost);
-		double this_lower_bound = kr.MST(data->getDimension());
+		Kruskal kr(cost, 1);
+		double mst_sol = kr.MST(data->getDimension());
+		double this_lower_bound = 0;
 
 		g = vector<int>(data->getDimension(), 2);
 		for (size_t i = 0; i < kr.edges.size(); i++) {
 			g[kr.edges[i].first]--;
 			g[kr.edges[i].second]--;
+			this_lower_bound += og_cost[kr.edges[i].first][kr.edges[i].second];
 		}
 
 		modG = 0;
 		for (size_t i = 0; i < g.size(); i++) {
 			modG += g[i]*g[i];
 		}
+		double modGG = sqrt(accumulate(g.cbegin(), g.cend(), 0, [](int a, int b){ return a + b*b; }));
 
-		mi = epsilon*(upper_bound - this_lower_bound)/modG;
+		mi = epsilon*(upper_bound - this_lower_bound)/modGG;
 
 		for (size_t i = 0; i < lambda.size(); i++) {
 			lambda[i] += mi*g[i];
-			feasible = feasible && g[i] == 0;
+			cerr << lambda[i] << " ";
 		}
+		int sum = accumulate(g.cbegin(), g.cend(), 0, [](int a, int b){ return a + abs(b); });
+		cerr << sum << "\n";
+		feasible = sum == 0;
 
 		// if (count % 500000 == 0) {
 		// 	// for (int i = 0; i < data->getDimension(); i++) {
@@ -133,13 +140,13 @@ int main(int argc, char** argv) {
 		// }
 		// count++;
 
-		if (this_lower_bound > upper_bound - EPS) {
-			// tree.erase(node);
-			break;
-		}
+		// if (this_lower_bound > upper_bound - EPS) {
+		// 	// tree.erase(node);
+		// 	break;
+		// }
 
-		if (this_lower_bound > lower_bound) {
-			lower_bound = this_lower_bound;
+		if (mst_sol > lower_bound) {
+			lower_bound = mst_sol;
 			k = 0;
 		}
 		else {
