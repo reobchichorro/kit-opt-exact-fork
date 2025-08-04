@@ -10,9 +10,9 @@
 
 using namespace std;
 #define EPS 1e-6
-#define MINEPS 1e-3
+#define MINEPS 1e-6
 #define MAX_TREE_SIZE 1e+6
-#define KMAX 30
+#define KMAX 15
 
 struct Node {
 	double lower_bound; // cost of MST
@@ -43,9 +43,9 @@ double createInitialSolution(Data *data, const vector<vector<double>>& cost) {
 	}
 	sol_cost += cost[sol.back()][0];
 	for (auto it = sol.cbegin(); it != sol.cend(); it++) {
-		cerr << *it << " ";
+		cout << *it << " ";
 	}
-	cerr << sol_cost << " init\n";
+	cout << sol_cost << " init\n";
 	return sol_cost;
 }
 
@@ -75,14 +75,14 @@ int main(int argc, char** argv) {
 	size_t tree_size = 1;
 
 	vector<double> lambda(data->getDimension(), 0);
-	double epsilon = 1;
+	double epsilon = 0.5;
 	size_t k = 0;
 	double mi = 0;
 	vector<int> g(data->getDimension(), 2);
 	double modG = 0;
 	bool feasible = false;
 
-	while (/*!tree.empty() && */count < itmax && tree_size < MAX_TREE_SIZE && (epsilon >= EPS && !feasible)) {
+	while (/*!tree.empty() && */count < itmax && tree_size < MAX_TREE_SIZE && (epsilon >= MINEPS && !feasible)) {
 		// Node node = tree.back();
 		// tree.pop_back();
 		// tree_size--;
@@ -102,24 +102,23 @@ int main(int argc, char** argv) {
 			g[kr.edges[i].first]--;
 			g[kr.edges[i].second]--;
 			this_lower_bound += og_cost[kr.edges[i].first][kr.edges[i].second];
+			cout << kr.edges[i].first << "," << kr.edges[i].second << " ";
 		}
-
+		cout << "\n";
+		
 		modG = sqrt(accumulate(g.cbegin(), g.cend(), 0, [](int a, int b){ return a + b*b; }));
-
-		mi = epsilon*(upper_bound - mst_sol)/modG;
-
-		cerr << mst_sol << "\t" << this_lower_bound << "\t" << lower_bound << "\t" << upper_bound << "\n";
-		for (size_t i = 0; i < lambda.size(); i++) {
-			lambda[i] += mi*g[i];
-			cerr << lambda[i] << " ";
-		}
-		cerr << epsilon << "\n";
-		for (size_t i = 0; i < g.size(); i++) {
-			cerr << g[i] << " ";
-		}
-		// int sum = accumulate(g.cbegin(), g.cend(), 0, [](int a, int b){ return a + abs(b); });
-		cerr << modG << "\n";
 		feasible = modG < EPS;
+
+		if (!feasible) {
+			mi = epsilon*(upper_bound - mst_sol)/modG;
+	
+			// cerr << mst_sol << "\t" << this_lower_bound << "\t" << lower_bound << "\t" << upper_bound << "\n";
+			for (size_t i = 0; i < lambda.size(); i++) {
+				lambda[i] += mi*g[i];
+				cout << lambda[i] << " ";
+			}
+			cout << "\n";
+		}
 
 		// if (count % 500000 == 0) {
 		// 	// for (int i = 0; i < data->getDimension(); i++) {
@@ -143,6 +142,7 @@ int main(int argc, char** argv) {
 			if (k >= KMAX) {
 				k = 0;
 				epsilon /= 2;
+				cerr << epsilon << "\n";
 			}
 		}
 
@@ -151,14 +151,15 @@ int main(int argc, char** argv) {
 				// for (int i = 0; i < data->getDimension(); i++) {
 				// 	cerr << p.successors[i] << "\t";
 				// }
-				cerr << "\n\t";
+				// cerr << "\n\t";
 				upper_bound = min(upper_bound, this_lower_bound);
 				// lower_bound = min(lower_bound, node.lower_bound);
 				// cerr << count << " c " << node.feasible << " " << node.lower_bound << " " << upper_bound << " " << node.forbidden_arcs.size() << "\n";
 			}
 		}
 	}
-	cout << count << " " << upper_bound << " " << tree_size << endl;
+	// cerr << "\n";
+	cerr << data->getInstanceName() << ";" << lower_bound << " " << upper_bound << " " << tree_size << " " << count << endl;
 
 	// for (int i = 0; i < data->getDimension(); i++) delete [] cost[i];
 	// delete [] cost;
