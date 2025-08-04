@@ -146,10 +146,12 @@ int main(int argc, char** argv) {
 		// }
 		// count++;
 
-		if (node.lower_bound > lower_bound + EPS || node.epsilon < MINEPS) {
+		if (node.lower_bound > upper_bound || node.epsilon < MINEPS)
+			continue;
+
+		if (node.lower_bound > lower_bound + EPS) {
 			lower_bound = node.lower_bound;
 			node.k = 0;
-			continue;
 		}
 		else {
 			node.k++;
