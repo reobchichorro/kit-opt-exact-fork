@@ -15,7 +15,7 @@ using namespace std;
 #define MINEPS 1e-6
 #define MAX_TREE_SIZE 1e+6
 #define KMAX 15
-#define BRANCHING 2 // 0 for DFS, 1 for BFS, 2 for LB
+#define BRANCHING 0 // 0 for DFS, 1 for BFS, 2 for LB
 #define MAXCOST 99999999
 
 double createInitialSolution(Data *data, const vector<vector<double>>& cost) {
@@ -85,6 +85,7 @@ int main(int argc, char** argv) {
 	bool feasible = false;
 
 	while ((BRANCHING == 2 ? !pq_tree.empty() : !tree.empty()) && count < itmax && tree_size < MAX_TREE_SIZE) {
+		count++;
 		Node node;
 		if (BRANCHING == 0) {
 			node = tree.back();
@@ -106,10 +107,15 @@ int main(int argc, char** argv) {
 			for (int j = 0; j < data->getDimension(); j++) {
 				cost[i][j] = og_cost[i][j] - node.lambda[i] - node.lambda[j];
 			}
+			cerr << node.lambda[i] << " ";
 		}
+		cerr << "\n";
+
 		for (auto it = node.forbidden_arcs.cbegin(); it != node.forbidden_arcs.cend(); it++) {
 			cost[(*it).first][(*it).second] = MAXCOST;
+			cerr << (*it).first << "," << (*it).second << " ";
 		}
+		cerr << "fa\n";
 
 		Kruskal kr(cost, 1);
 		node.lower_bound = kr.MST(data->getDimension());
@@ -119,23 +125,12 @@ int main(int argc, char** argv) {
 			g[kr.edges[i].first]--;
 			g[kr.edges[i].second]--;
 			node.real_cost += og_cost[kr.edges[i].first][kr.edges[i].second];
-			cout << kr.edges[i].first << "," << kr.edges[i].second << " ";
+			cerr << kr.edges[i].first << "," << kr.edges[i].second << " ";
 		}
-		cout << "\n";
+		cerr << "edges\n" << node.lower_bound << " " << lower_bound << " " << upper_bound << "\n";
 		
 		modG = sqrt(accumulate(g.cbegin(), g.cend(), 0, [](int a, int b){ return a + b*b; }));
 		feasible = modG < EPS;
-
-		if (!feasible) {
-			mi = node.epsilon*(upper_bound - node.lower_bound)/modG;
-	
-			// cerr << mst_sol << "\t" << this_lower_bound << "\t" << lower_bound << "\t" << upper_bound << "\n";
-			for (size_t i = 0; i < node.lambda.size(); i++) {
-				node.lambda[i] += mi*g[i];
-				cout << node.lambda[i] << " ";
-			}
-			cout << "\n";
-		}
 
 		// if (count % 500000 == 0) {
 		// 	// for (int i = 0; i < data->getDimension(); i++) {
@@ -158,7 +153,7 @@ int main(int argc, char** argv) {
 			if (node.k >= KMAX) {
 				node.k = 0;
 				node.epsilon /= 2;
-				cerr << node.epsilon << "\n";
+				// cerr << node.epsilon << "\n";
 			}
 		}
 
@@ -174,6 +169,15 @@ int main(int argc, char** argv) {
 			}
 		}
 		else {
+			mi = node.epsilon*(upper_bound - node.lower_bound)/modG;
+	
+			// cerr << mst_sol << "\t" << this_lower_bound << "\t" << lower_bound << "\t" << upper_bound << "\n";
+			for (size_t i = 0; i < node.lambda.size(); i++) {
+				node.lambda[i] += mi*g[i];
+				// cerr << node.lambda[i] << " ";
+			}
+			// cerr << "\n";
+
 			for (size_t i = 1; i < g.size(); i++) {
 				if (g[i] < g[node.biggest])
 					node.biggest = i;

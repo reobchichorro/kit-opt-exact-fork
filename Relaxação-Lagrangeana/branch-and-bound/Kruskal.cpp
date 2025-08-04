@@ -4,7 +4,8 @@ Kruskal::Kruskal(const vvi& dist, int zero_setup) {
 	this->zero_setup = zero_setup;
 	for (size_t i = (zero_setup == USE_ZERO ? 0 : 1); i < dist.size(); ++i) {
 		for (size_t j = i+1; j < dist[i].size(); ++j) {
-			graph.push( make_pair(-dist[i][j], make_pair(i, j)) );
+			if (dist[i][j] < 9e7)
+				graph.push( make_pair(-dist[i][j], make_pair(i, j)) );
 		}
 	}
 	zero_edges = vector<double>(dist.size());
