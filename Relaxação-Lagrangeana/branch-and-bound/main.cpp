@@ -15,7 +15,7 @@ using namespace std;
 #define MINEPS 1e-6
 #define MAX_TREE_SIZE 1e+6
 #define KMAX 15
-#define BRANCHING 0 // 0 for DFS, 1 for BFS, 2 for LB
+#define BRANCHING 2 // 0 for DFS, 1 for BFS, 2 for LB
 #define MAXCOST 99999999
 
 double createInitialSolution(Data *data, const vector<vector<double>>& cost) {
@@ -67,7 +67,7 @@ int main(int argc, char** argv) {
 
 	list<Node> tree;
 	tree.push_back(root);
-	auto cmp = [](Node& a, Node&b){ return a.lower_bound < b.lower_bound; };
+	auto cmp = [](Node& a, Node&b){ return a.lower_bound > b.lower_bound; };
 	priority_queue<Node, deque<Node>, decltype(cmp)> pq_tree(cmp);
 	pq_tree.push(root);
 	
@@ -75,14 +75,16 @@ int main(int argc, char** argv) {
 	cout << upper_bound << endl;
 	double lower_bound = 0;
 
-	int count = 0;
-	long long int itmax = 100000000;
+	long long int count = 0;
+	long long int itmax = 10000000;
 	size_t tree_size = 1;
 
 	double mi = 0;
 	vector<int> g(data->getDimension(), 2);
 	double modG = 0;
 	bool feasible = false;
+
+	double node_cost;
 
 	while ((BRANCHING == 2 ? !pq_tree.empty() : !tree.empty()) && count < itmax && tree_size < MAX_TREE_SIZE) {
 		count++;
@@ -107,27 +109,27 @@ int main(int argc, char** argv) {
 			for (int j = 0; j < data->getDimension(); j++) {
 				cost[i][j] = og_cost[i][j] - node.lambda[i] - node.lambda[j];
 			}
-			cerr << node.lambda[i] << " ";
+			// cerr << node.lambda[i] << " ";
 		}
-		cerr << "\n";
+		// cerr << "\n";
 
-		for (auto it = node.forbidden_arcs.cbegin(); it != node.forbidden_arcs.cend(); it++) {
+		for (auto it = node.forbidden_edges.cbegin(); it != node.forbidden_edges.cend(); it++) {
 			cost[(*it).first][(*it).second] = MAXCOST;
-			cerr << (*it).first << "," << (*it).second << " ";
+			// cerr << (*it).first << "," << (*it).second << " ";
 		}
-		cerr << "fa\n";
+		// cerr << "fa\n";
 
 		Kruskal kr(cost, 1);
-		node.lower_bound = kr.MST(data->getDimension());
+		node_cost = kr.MST(data->getDimension());
 
 		g = vector<int>(data->getDimension(), 2);
 		for (size_t i = 0; i < kr.edges.size(); i++) {
 			g[kr.edges[i].first]--;
 			g[kr.edges[i].second]--;
 			node.real_cost += og_cost[kr.edges[i].first][kr.edges[i].second];
-			cerr << kr.edges[i].first << "," << kr.edges[i].second << " ";
+			// cerr << kr.edges[i].first << "," << kr.edges[i].second << " ";
 		}
-		cerr << "edges\n" << node.lower_bound << " " << lower_bound << " " << upper_bound << "\n";
+		// cerr << "edges\n" << node_cost << " " << node.real_cost << " " << node.lower_bound << " " << upper_bound << "\n";
 		
 		modG = sqrt(accumulate(g.cbegin(), g.cend(), 0, [](int a, int b){ return a + b*b; }));
 		feasible = modG < EPS;
@@ -137,15 +139,15 @@ int main(int argc, char** argv) {
 		// 	// 	cerr << p.successors[i] << "\t";
 		// 	// }
 		// 	// cerr << "\n";
-		// 	cerr << count << " c " << node.feasible << " " << node.chosen_subtour.size() << " " << node.lower_bound << " " << upper_bound << " " << node.forbidden_arcs.size() << "\n";		// tree.erase(node);
+		// 	cerr << count << " c " << node.feasible << " " << node.chosen_subtour.size() << " " << node.lower_bound << " " << upper_bound << " " << node.forbidden_edges.size() << "\n";		// tree.erase(node);
 		// }
 		// count++;
 
-		if (node.lower_bound > upper_bound || node.epsilon < MINEPS)
+		if (node_cost > upper_bound || node.epsilon < MINEPS)
 			continue;
 
-		if (node.lower_bound > lower_bound + EPS) {
-			lower_bound = node.lower_bound;
+		if (node_cost > node.lower_bound + EPS) {
+			node.lower_bound = node_cost;
 			node.k = 0;
 		}
 		else {
@@ -165,17 +167,22 @@ int main(int argc, char** argv) {
 				// cerr << "\n\t";
 				upper_bound = min(upper_bound, node.real_cost);
 				// lower_bound = min(lower_bound, node.lower_bound);
-				// cerr << count << " c " << node.feasible << " " << node.lower_bound << " " << upper_bound << " " << node.forbidden_arcs.size() << "\n";
+				// cerr << count << " c " << node.feasible << " " << node.lower_bound << " " << upper_bound << " " << node.forbidden_edges.size() << "\n";
 			}
 		}
 		else {
-			mi = node.epsilon*(upper_bound - node.lower_bound)/modG;
+			mi = node.epsilon*(upper_bound - node.lower_bound)/modG; // TODO: node.lower_bound vs node_cost
 	
 			// cerr << mst_sol << "\t" << this_lower_bound << "\t" << lower_bound << "\t" << upper_bound << "\n";
+			bool skip = false;
 			for (size_t i = 0; i < node.lambda.size(); i++) {
 				node.lambda[i] += mi*g[i];
+				if (node.lambda[i] > MAXCOST/10 || node.lambda[i] < -MAXCOST/10)
+					skip = true;
 				// cerr << node.lambda[i] << " ";
 			}
+			if (skip)
+				continue;
 			// cerr << "\n";
 
 			for (size_t i = 1; i < g.size(); i++) {
@@ -188,8 +195,8 @@ int main(int argc, char** argv) {
 					Node n;
 					n.lower_bound = node.lower_bound;
 
-					n.forbidden_arcs = node.forbidden_arcs;
-					n.forbidden_arcs.push_back({
+					n.forbidden_edges = node.forbidden_edges;
+					n.forbidden_edges.push_back({
 						kr.edges[i].first,
 						kr.edges[i].second
 					});
@@ -209,7 +216,7 @@ int main(int argc, char** argv) {
 		}
 	}
 	// cerr << "\n";
-	cerr << data->getInstanceName() << ";" << lower_bound << " " << upper_bound << " " << tree_size << " " << count << endl;
+	cout << data->getInstanceName() << ";" << upper_bound << " " << tree_size << " " << count << endl;
 
 	// for (int i = 0; i < data->getDimension(); i++) delete [] cost[i];
 	// delete [] cost;
