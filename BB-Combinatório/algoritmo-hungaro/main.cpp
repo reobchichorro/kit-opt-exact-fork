@@ -141,7 +141,7 @@ int main(int argc, char** argv) {
 
 	list<Node> tree;
 	tree.push_back(root);
-	auto cmp = [](Node& a, Node&b){ return a.lower_bound < b.lower_bound; };
+	auto cmp = [](Node& a, Node&b){ return a.lower_bound > b.lower_bound; };
 	priority_queue<Node, deque<Node>, decltype(cmp)> pq_tree(cmp);
 	pq_tree.push(root);
 	
