@@ -55,6 +55,8 @@ double Kruskal::MST(size_t nodes){
 	if (zero_setup == TWO_CLOSEST) {
 		size_t closest = 1;
 		size_t second_closest = 2;
+		if (zero_edges[2] < zero_edges[1])
+			swap(closest, second_closest);
 		for (size_t i=3; i<zero_edges.size(); i++) {
 			if (zero_edges[i] < zero_edges[second_closest]) {
 				if (zero_edges[i] < zero_edges[closest]) {
