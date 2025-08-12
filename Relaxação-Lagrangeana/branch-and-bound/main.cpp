@@ -13,8 +13,8 @@
 using namespace std;
 #define EPS 1e-6
 #define MINEPS 1e-6
-#define MAX_TREE_SIZE 1e+6
-#define KMAX 15
+#define MAX_TREE_SIZE 1e+8
+#define KMAX 12
 #define BRANCHING 2 // 0 for DFS, 1 for BFS, 2 for LB
 #define MAXCOST 99999999
 
@@ -134,14 +134,9 @@ int main(int argc, char** argv) {
 		modG = sqrt(accumulate(g.cbegin(), g.cend(), 0, [](int a, int b){ return a + b*b; }));
 		feasible = modG < EPS;
 
-		// if (count % 500000 == 0) {
-		// 	// for (int i = 0; i < data->getDimension(); i++) {
-		// 	// 	cerr << p.successors[i] << "\t";
-		// 	// }
-		// 	// cerr << "\n";
-		// 	cerr << count << " c " << node.feasible << " " << node.chosen_subtour.size() << " " << node.lower_bound << " " << upper_bound << " " << node.forbidden_edges.size() << "\n";		// tree.erase(node);
-		// }
-		// count++;
+		if (count % 500000 == 0) {
+			cerr << count << " c " << feasible << " " << node.lower_bound << " " << upper_bound << " " << node.forbidden_edges.size() << "\n";
+		}
 
 		if (node_cost > upper_bound || node.epsilon < MINEPS)
 			continue;
@@ -161,13 +156,9 @@ int main(int argc, char** argv) {
 
 		if (feasible) {
 			if (node.real_cost < upper_bound + EPS) {
-				// for (int i = 0; i < data->getDimension(); i++) {
-				// 	cerr << p.successors[i] << "\t";
-				// }
-				// cerr << "\n\t";
 				upper_bound = min(upper_bound, node.real_cost);
 				// lower_bound = min(lower_bound, node.lower_bound);
-				// cerr << count << " c " << node.feasible << " " << node.lower_bound << " " << upper_bound << " " << node.forbidden_edges.size() << "\n";
+				cerr << count << " c " << feasible << " " << node.lower_bound << " " << upper_bound << " " << node.forbidden_edges.size() << "\n";
 			}
 		}
 		else {
@@ -194,23 +185,40 @@ int main(int argc, char** argv) {
 				if (node.biggest == kr.edges[i].first || node.biggest == kr.edges[i].second) {
 					Node n;
 					n.lower_bound = node.lower_bound;
-
+					
 					n.forbidden_edges = node.forbidden_edges;
 					n.forbidden_edges.push_back({
 						kr.edges[i].first,
 						kr.edges[i].second
 					});
-
+					
 					n.lambda = node.lambda;
 					n.epsilon = node.epsilon;
 					n.k = node.k;
-
+					
 					if (BRANCHING == 0 || BRANCHING == 1) {
 						tree.push_back(n);
 					}
 					else if (BRANCHING == 2) {
 						pq_tree.push(n);
 					}
+				}
+			}
+			tree_size++;
+			{
+				Node n;
+				n.lower_bound = node.lower_bound;
+				
+				n.forbidden_edges = node.forbidden_edges;
+				n.lambda = node.lambda;
+				n.epsilon = node.epsilon;
+				n.k = node.k;
+				
+				if (BRANCHING == 0 || BRANCHING == 1) {
+					tree.push_back(n);
+				}
+				else if (BRANCHING == 2) {
+					pq_tree.push(n);
 				}
 			}
 		}

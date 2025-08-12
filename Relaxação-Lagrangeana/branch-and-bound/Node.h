@@ -14,7 +14,7 @@ public:
 	vector<pair<int, int>> forbidden_edges;
 	vector<double> lambda;
 	size_t biggest = 0; // vtx with biggest degree
-	double epsilon = 0.125;
+	double epsilon = 1;
 	size_t k = 0;
 
 private:
