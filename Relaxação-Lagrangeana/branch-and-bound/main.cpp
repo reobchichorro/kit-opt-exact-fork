@@ -12,10 +12,11 @@
 
 using namespace std;
 #define EPS 1e-6
-#define MINEPS 1e-6
+#define BIGEPS 1e-2
+#define MINEPS 1e-4
 #define MAX_TREE_SIZE 1e+8
-#define KMAX 12
-#define BRANCHING 2 // 0 for DFS, 1 for BFS, 2 for LB
+#define KMAX 8
+#define BRANCHING 0 // 0 for DFS, 1 for BFS, 2 for LB
 #define MAXCOST 99999999
 
 double createInitialSolution(Data *data, const vector<vector<double>>& cost) {
@@ -73,7 +74,7 @@ int main(int argc, char** argv) {
 	
 	double upper_bound = createInitialSolution(data, cost);
 	cout << upper_bound << endl;
-	double lower_bound = 0;
+	// double lower_bound = 0;
 
 	long long int count = 0;
 	long long int itmax = 10000000;
@@ -85,6 +86,8 @@ int main(int argc, char** argv) {
 	bool feasible = false;
 
 	double node_cost;
+
+	size_t skipcount = 0;
 
 	while ((BRANCHING == 2 ? !pq_tree.empty() : !tree.empty()) && count < itmax && tree_size < MAX_TREE_SIZE) {
 		count++;
@@ -105,6 +108,11 @@ int main(int argc, char** argv) {
 		tree_size--;
 		feasible = true;
 
+		if (upper_bound - node.lower_bound < 0.1) {
+			skipcount++;
+			continue;
+		}
+		
 		for (int i = 0; i < data->getDimension(); i++) {
 			for (int j = 0; j < data->getDimension(); j++) {
 				cost[i][j] = og_cost[i][j] - node.lambda[i] - node.lambda[j];
@@ -135,11 +143,13 @@ int main(int argc, char** argv) {
 		feasible = modG < EPS;
 
 		if (count % 500000 == 0) {
-			cerr << count << " c " << feasible << " " << node.lower_bound << " " << upper_bound << " " << node.forbidden_edges.size() << "\n";
+			cerr << count << " " << skipcount << " c " << feasible << " " << node.lower_bound << " " << upper_bound << " " << node.forbidden_edges.size() << "\n";
 		}
 
-		if (node_cost > upper_bound || node.epsilon < MINEPS)
+		if (node_cost > upper_bound || node.epsilon < MINEPS) {
+			skipcount++;
 			continue;
+		}
 
 		if (node_cost > node.lower_bound + EPS) {
 			node.lower_bound = node_cost;
@@ -155,11 +165,12 @@ int main(int argc, char** argv) {
 		}
 
 		if (feasible) {
-			if (node.real_cost < upper_bound + EPS) {
+			if (node.real_cost < upper_bound) {
 				upper_bound = min(upper_bound, node.real_cost);
 				// lower_bound = min(lower_bound, node.lower_bound);
-				cerr << count << " c " << feasible << " " << node.lower_bound << " " << upper_bound << " " << node.forbidden_edges.size() << "\n";
+				cerr << count << " " << skipcount << " c " << feasible << " " << node.lower_bound << " " << upper_bound << " " << node.forbidden_edges.size() << "\n";
 			}
+			skipcount++;
 		}
 		else {
 			mi = node.epsilon*(upper_bound - node.lower_bound)/modG; // TODO: node.lower_bound vs node_cost
@@ -172,8 +183,13 @@ int main(int argc, char** argv) {
 					skip = true;
 				// cerr << node.lambda[i] << " ";
 			}
-			if (skip)
+			if (upper_bound - node.lower_bound < 0.1)
+				skip = true;
+
+			if (skip) {
+				skipcount++;
 				continue;
+			}
 			// cerr << "\n";
 
 			for (size_t i = 1; i < g.size(); i++) {

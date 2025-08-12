@@ -1,13 +1,16 @@
 #include "Kruskal.h"
 
 Kruskal::Kruskal(const vvi& dist, int zero_setup) {
+	non_zero_edges.reserve(dist.size());
 	this->zero_setup = zero_setup;
 	for (size_t i = (zero_setup == USE_ZERO ? 0 : 1); i < dist.size(); ++i) {
 		for (size_t j = i+1; j < dist[i].size(); ++j) {
 			if (dist[i][j] < 9e7)
-				graph.push( make_pair(-dist[i][j], make_pair(i, j)) );
+				non_zero_edges.push_back( make_pair(dist[i][j], make_pair(i, j)) );
+				// graph.push( make_pair(-dist[i][j], make_pair(i, j)) );
 		}
 	}
+	sort(non_zero_edges.begin(), non_zero_edges.end());
 	zero_edges = vector<double>(dist.size());
 	for(size_t i = 0; i < dist.size(); ++i) {
 		zero_edges[i] = dist[0][i];
@@ -42,16 +45,25 @@ double Kruskal::MST(size_t nodes){
 
 	double cost = 0;
 
-	while(!graph.empty()){
-		pair<double, ii> p = graph.top();
-		graph.pop();
+	// while(!graph.empty()){
+	// 	pair<double, ii> p = graph.top();
+	// 	graph.pop();
 
-		if(!isSameSet(p.second.first, p.second.second)){
-			edges.push_back(make_pair(p.second.first, p.second.second));
-			cost += (-p.first);
-			unionSet(p.second.first, p.second.second);
+	// 	if(!isSameSet(p.second.first, p.second.second)){
+	// 		edges.push_back(make_pair(p.second.first, p.second.second));
+	// 		cost += (-p.first);
+	// 		unionSet(p.second.first, p.second.second);
+	// 	}
+	// }
+
+	for (auto it = non_zero_edges.cbegin(); it != non_zero_edges.cend(); it++) {
+		if(!isSameSet(it->second.first, it->second.second)){
+			edges.push_back(make_pair(it->second.first, it->second.second));
+			cost += it->first;
+			unionSet(it->second.first, it->second.second);
 		}
 	}
+
 	if (zero_setup == TWO_CLOSEST) {
 		size_t closest = 1;
 		size_t second_closest = 2;

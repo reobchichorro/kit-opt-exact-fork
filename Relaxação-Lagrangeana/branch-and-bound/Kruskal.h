@@ -6,6 +6,7 @@
 #include <vector>
 #include <queue>
 #include <utility>
+#include <algorithm>
 #include "Node.h"
 
 using namespace std;
@@ -28,7 +29,8 @@ public:
 	int zero_setup;
 
 private:
-	priority_queue <pair<double,ii> > graph;
+	// priority_queue <pair<double,ii> > graph;
+	vector<pair<double, ii>> non_zero_edges;
 	vector <size_t> pset;
 	vector<double> zero_edges;
 
