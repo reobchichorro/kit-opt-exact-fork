@@ -12,14 +12,11 @@
 
 using namespace std;
 #define EPS 1e-6
-#define BIGEPS 1e-2
-#define MINEPS 1e-4
 #define MAX_TREE_SIZE 1e+8
-#define KMAX 8
 #define BRANCHING 0 // 0 for DFS, 1 for BFS, 2 for LB
 #define MAXCOST 99999999
 
-double createInitialSolution(Data *data, const vector<vector<double>>& cost) {
+double createInitialSolution(Data *data, const vector<vector<double>>& cost, vector<pair<size_t,size_t>>& edges) {
 	unordered_set<int> remaining;
 	list<size_t> sol; sol.push_back(0);
 	for (int i = 1; i < data->getDimension(); i++)
@@ -28,6 +25,7 @@ double createInitialSolution(Data *data, const vector<vector<double>>& cost) {
 	double sol_cost = 0;
 	size_t nearest = -1;
 	double dist_nearest = 99999999;
+	pair<size_t,size_t> curr_edge;
 	while (!remaining.empty()) {
 		for (auto it = remaining.begin(); it != remaining.end(); it++) {
 			if (cost[sol.back()][*it] < dist_nearest) {
@@ -35,6 +33,7 @@ double createInitialSolution(Data *data, const vector<vector<double>>& cost) {
 				dist_nearest = cost[sol.back()][*it];
 			}
 		}
+		edges.push_back(make_pair(sol.back(), nearest));
 		sol.push_back(nearest);
 		sol_cost += dist_nearest;
 		remaining.erase(nearest);
@@ -42,6 +41,10 @@ double createInitialSolution(Data *data, const vector<vector<double>>& cost) {
 		dist_nearest = 99999999;
 	}
 	sol_cost += cost[sol.back()][0];
+	for (size_t i = 0; i < edges.size(); i++) {
+		cout << edges[i].first << "," << edges[i].second << " ";
+	}
+	cout << "\n";
 	for (auto it = sol.cbegin(); it != sol.cend(); it++) {
 		cout << *it << " ";
 	}
@@ -63,33 +66,29 @@ int main(int argc, char** argv) {
 		}
 	}
 	
-	Node root;
-	root.lambda = vector<double>(data->getDimension(), 0);
+	vector<pair<size_t,size_t>> edges;
+	double UB = createInitialSolution(data, cost, edges);
+	// double lower_bound = 0;
+	cout << UB << endl;
+
+	auto lambda = vector<double>(data->getDimension(), 0);
+	Node root = Node(0, UB, lambda);
 
 	list<Node> tree;
 	tree.push_back(root);
-	auto cmp = [](Node& a, Node&b){ return a.lower_bound > b.lower_bound; };
+	auto cmp = [](Node& a, Node&b){ return a.LB > b.LB; };
 	priority_queue<Node, deque<Node>, decltype(cmp)> pq_tree(cmp);
 	pq_tree.push(root);
 	
-	double upper_bound = createInitialSolution(data, cost);
-	cout << upper_bound << endl;
-	// double lower_bound = 0;
-
 	long long int count = 0;
 	long long int itmax = 10000000;
 	size_t tree_size = 1;
 
-	double mi = 0;
-	vector<int> g(data->getDimension(), 2);
-	double modG = 0;
-	bool feasible = false;
-
-	double node_cost;
-
 	size_t skipcount = 0;
 
 	bool first = true;
+
+	long long int count_lim = 5000;
 
 	while ((BRANCHING == 2 ? !pq_tree.empty() : !tree.empty()) && count < itmax && tree_size < MAX_TREE_SIZE) {
 		count++;
@@ -108,136 +107,57 @@ int main(int argc, char** argv) {
 		}
 		
 		tree_size--;
-		feasible = true;
 
-		if (upper_bound - node.lower_bound < 0.1) {
+		if (UB - node.LB < 0.1) {
 			skipcount++;
 			continue;
 		}
 		
-		for (int i = 0; i < data->getDimension(); i++) {
-			for (int j = 0; j < data->getDimension(); j++) {
-				cost[i][j] = og_cost[i][j] - node.lambda[i] - node.lambda[j];
-			}
-			// cerr << node.lambda[i] << " ";
-		}
-		// cerr << "\n";
+		node.Solve(og_cost, cost);
 
-		for (auto it = node.forbidden_edges.cbegin(); it != node.forbidden_edges.cend(); it++) {
-			cost[(*it).first][(*it).second] = MAXCOST;
-			// cerr << (*it).first << "," << (*it).second << " ";
-		}
-		// cerr << "fa\n";
-
-		Kruskal kr(cost, 1);
-		node_cost = kr.MST(data->getDimension());
-
-		if (count % 500000 == 0) {
-			cerr << count << " " << skipcount << " c " << feasible << " " << node.lower_bound << " " << upper_bound << " " << node.forbidden_edges.size() << "\n";
+		if (count % count_lim == 0) {
+			cerr << count << " " << skipcount << " c " << node.feasible << " " << node.LB << " " << UB << " " << node.forbidden_edges.size() << " " << tree_size << "\n";
+			if (count > 10*count_lim)
+				count_lim *= 20;
 		}
 
-		if (node_cost > upper_bound || node.epsilon < MINEPS) {
+		if (node.LB > UB || node.edges.size() == 0) {
 			skipcount++;
 			continue;
 		}
 
-		g = vector<int>(data->getDimension(), 2);
-		for (size_t i = 0; i < kr.edges.size(); i++) {
-			g[kr.edges[i].first]--;
-			g[kr.edges[i].second]--;
-			node.real_cost += og_cost[kr.edges[i].first][kr.edges[i].second];
-			// cerr << kr.edges[i].first << "," << kr.edges[i].second << " ";
-		}
-		// cerr << "edges\n" << node_cost << " " << node.real_cost << " " << node.lower_bound << " " << upper_bound << "\n";
-		
-		modG = sqrt(accumulate(g.cbegin(), g.cend(), 0, [](int a, int b){ return a + b*b; }));
-		feasible = modG < EPS;
-
-		if (node_cost > node.lower_bound + EPS) {
-			node.lower_bound = node_cost;
-			node.k = 0;
-		}
-		else {
-			node.k++;
-			if (node.k >= KMAX) {
-				node.k = 0;
-				node.epsilon /= 2;
-				// cerr << node.epsilon << "\n";
-			}
-		}
-
-		if (feasible) {
-			if (node.real_cost < upper_bound) {
-				upper_bound = min(upper_bound, node.real_cost);
+		if (node.feasible) {
+			if (node.UB < UB) {
+				UB = min(UB, node.UB);
 				// lower_bound = min(lower_bound, node.lower_bound);
-				cerr << count << " " << skipcount << " c " << feasible << " " << node.lower_bound << " " << upper_bound << " " << node.forbidden_edges.size() << "\n";
+				cerr << count << " " << skipcount << " c " << node.feasible << " " << node.LB << " " << UB << " " << node.forbidden_edges.size() << " " << tree_size << "\n";
 			}
-			skipcount++;
 			if (first) {
 				first = false;
-				for (size_t i = 0; i < kr.edges.size(); i++) {
-					cerr << kr.edges[i].first << "," << kr.edges[i].second << " ";
+				for (size_t i = 0; i < node.edges.size(); i++) {
+					cerr << node.edges[i].first << "," << node.edges[i].second << " ";
 				}
 				cerr << "\n";
 			}
 		}
-		else {
-			mi = node.epsilon*(upper_bound - node.lower_bound)/modG;
-	
-			// cerr << mst_sol << "\t" << this_lower_bound << "\t" << lower_bound << "\t" << upper_bound << "\n";
-			bool skip = false;
-			for (size_t i = 0; i < node.lambda.size(); i++) {
-				node.lambda[i] += mi*g[i];
-				if (node.lambda[i] > MAXCOST/10 || node.lambda[i] < -MAXCOST/10)
-					skip = true;
-				// cerr << node.lambda[i] << " ";
-			}
-			if (upper_bound - node.lower_bound < 0.1)
-				skip = true;
 
-			if (skip) {
-				skipcount++;
-				continue;
-			}
-			// cerr << "\n";
+		// cerr << mst_sol << "\t" << this_lower_bound << "\t" << lower_bound << "\t" << UB << "\n";
+		if (UB - node.LB < 0.1) {
+			skipcount++;
+			continue;
+		}
+		// cerr << "\n";
 
-			for (size_t i = 1; i < g.size(); i++) {
-				if (g[i] < g[node.biggest])
-					node.biggest = i;
-			}
-			tree_size -= g[node.biggest]-2;
-			for (size_t i = 0; i < kr.edges.size(); i++) {
-				if (node.biggest == kr.edges[i].first || node.biggest == kr.edges[i].second) {
-					Node n;
-					n.lower_bound = node.lower_bound;
-					
-					n.forbidden_edges = node.forbidden_edges;
-					n.forbidden_edges.push_back({
-						kr.edges[i].first,
-						kr.edges[i].second
-					});
-					
-					n.lambda = node.lambda;
-					n.epsilon = node.epsilon;
-					n.k = node.k;
-					
-					if (BRANCHING == 0 || BRANCHING == 1) {
-						tree.push_back(n);
-					}
-					else if (BRANCHING == 2) {
-						pq_tree.push(n);
-					}
-				}
-			}
-			tree_size++;
-			{
-				Node n;
-				n.lower_bound = node.lower_bound;
+		// tree_size -= g[node.biggest]-2;
+		for (size_t i = 0; i < node.edges.size(); i++) {
+			if (node.biggest == node.edges[i].first || node.biggest == node.edges[i].second) {
+				Node n(node.LB, UB, node.lambda);
 				
 				n.forbidden_edges = node.forbidden_edges;
-				n.lambda = node.lambda;
-				n.epsilon = node.epsilon;
-				n.k = node.k;
+				n.forbidden_edges.push_back({
+					node.edges[i].first,
+					node.edges[i].second
+				});
 				
 				if (BRANCHING == 0 || BRANCHING == 1) {
 					tree.push_back(n);
@@ -245,11 +165,12 @@ int main(int argc, char** argv) {
 				else if (BRANCHING == 2) {
 					pq_tree.push(n);
 				}
+				tree_size++;
 			}
 		}
 	}
 	// cerr << "\n";
-	cout << data->getInstanceName() << ";" << upper_bound << " " << tree_size << " " << count << endl;
+	cout << data->getInstanceName() << ";" << UB << " " << tree_size << " " << count << endl;
 
 	// for (int i = 0; i < data->getDimension(); i++) delete [] cost[i];
 	// delete [] cost;
