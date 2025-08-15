@@ -89,6 +89,8 @@ int main(int argc, char** argv) {
 
 	size_t skipcount = 0;
 
+	bool first = true;
+
 	while ((BRANCHING == 2 ? !pq_tree.empty() : !tree.empty()) && count < itmax && tree_size < MAX_TREE_SIZE) {
 		count++;
 		Node node;
@@ -130,6 +132,15 @@ int main(int argc, char** argv) {
 		Kruskal kr(cost, 1);
 		node_cost = kr.MST(data->getDimension());
 
+		if (count % 500000 == 0) {
+			cerr << count << " " << skipcount << " c " << feasible << " " << node.lower_bound << " " << upper_bound << " " << node.forbidden_edges.size() << "\n";
+		}
+
+		if (node_cost > upper_bound || node.epsilon < MINEPS) {
+			skipcount++;
+			continue;
+		}
+
 		g = vector<int>(data->getDimension(), 2);
 		for (size_t i = 0; i < kr.edges.size(); i++) {
 			g[kr.edges[i].first]--;
@@ -141,15 +152,6 @@ int main(int argc, char** argv) {
 		
 		modG = sqrt(accumulate(g.cbegin(), g.cend(), 0, [](int a, int b){ return a + b*b; }));
 		feasible = modG < EPS;
-
-		if (count % 500000 == 0) {
-			cerr << count << " " << skipcount << " c " << feasible << " " << node.lower_bound << " " << upper_bound << " " << node.forbidden_edges.size() << "\n";
-		}
-
-		if (node_cost > upper_bound || node.epsilon < MINEPS) {
-			skipcount++;
-			continue;
-		}
 
 		if (node_cost > node.lower_bound + EPS) {
 			node.lower_bound = node_cost;
@@ -171,9 +173,16 @@ int main(int argc, char** argv) {
 				cerr << count << " " << skipcount << " c " << feasible << " " << node.lower_bound << " " << upper_bound << " " << node.forbidden_edges.size() << "\n";
 			}
 			skipcount++;
+			if (first) {
+				first = false;
+				for (size_t i = 0; i < kr.edges.size(); i++) {
+					cerr << kr.edges[i].first << "," << kr.edges[i].second << " ";
+				}
+				cerr << "\n";
+			}
 		}
 		else {
-			mi = node.epsilon*(upper_bound - node.lower_bound)/modG; // TODO: node.lower_bound vs node_cost
+			mi = node.epsilon*(upper_bound - node.lower_bound)/modG;
 	
 			// cerr << mst_sol << "\t" << this_lower_bound << "\t" << lower_bound << "\t" << upper_bound << "\n";
 			bool skip = false;
