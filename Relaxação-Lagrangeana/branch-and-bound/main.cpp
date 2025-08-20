@@ -72,7 +72,7 @@ int main(int argc, char** argv) {
 	cout << UB << endl;
 
 	auto lambda = vector<double>(data->getDimension(), 0);
-	Node root = Node(0, UB, lambda);
+	Node root = Node(0, UB, lambda, "");
 
 	list<Node> tree;
 	tree.push_back(root);
@@ -107,52 +107,59 @@ int main(int argc, char** argv) {
 		}
 		
 		tree_size--;
+		bool stop = node.code.size() == 1 && node.code[0] != 'c';
 
-		if (UB - node.LB < 0.1) {
+		if (UB < node.LB + EPS) {
 			skipcount++;
 			continue;
 		}
-		
+		node.UB = UB;
 		node.Solve(og_cost, cost);
 
 		if (count % count_lim == 0) {
-			cerr << count << " " << skipcount << " c " << node.feasible << " " << node.LB << " " << UB << " " << node.forbidden_edges.size() << " " << tree_size << "\n";
+			cerr << count << " " << skipcount << " c " << node.feasible << " " << node.LB << " " << UB << " " << node.forbidden_edges.size() << " " << tree_size << " " << node.code << "\n";
 			if (count > 10*count_lim)
 				count_lim *= 20;
 		}
 
-		if (node.LB > UB || node.edges.size() == 0) {
-			skipcount++;
-			continue;
-		}
+		// if (node.LB > UB || node.edges.size() == 0) {
+		// 	skipcount++;
+		// 	continue;
+		// }
 
 		if (node.feasible) {
-			if (node.UB < UB) {
+			if (node.UB + EPS < UB) {
 				UB = min(UB, node.UB);
 				// lower_bound = min(lower_bound, node.lower_bound);
-				cerr << count << " " << skipcount << " c " << node.feasible << " " << node.LB << " " << UB << " " << node.forbidden_edges.size() << " " << tree_size << "\n";
-			}
-			if (first) {
-				first = false;
-				for (size_t i = 0; i < node.edges.size(); i++) {
-					cerr << node.edges[i].first << "," << node.edges[i].second << " ";
+				cerr << count << " " << skipcount << " c " << node.feasible << " " << node.LB << " " << UB << " " << node.forbidden_edges.size() << " " << tree_size << " " << node.code << "\n";
+				if (true) {
+					first = false;
+					for (size_t i = 0; i < node.edges.size(); i++) {
+						cerr << node.edges[i].first << "," << node.edges[i].second << " ";
+					}
+					cerr << "\n";
+					for (size_t i = 0; i < node.forbidden_edges.size(); i++) {
+						cerr << node.forbidden_edges[i].first << "," << node.forbidden_edges[i].second << " ";
+					}
+					cerr << "\n";
+					
 				}
-				cerr << "\n";
 			}
 		}
 
 		// cerr << mst_sol << "\t" << this_lower_bound << "\t" << lower_bound << "\t" << UB << "\n";
-		if (UB - node.LB < 0.1) {
+		if (UB < node.LB + EPS || node.edges.size() == 0) {
 			skipcount++;
 			continue;
 		}
 		// cerr << "\n";
 
 		// tree_size -= g[node.biggest]-2;
+		char suffix = 'a';
 		for (size_t i = 0; i < node.edges.size(); i++) {
 			if (node.biggest == node.edges[i].first || node.biggest == node.edges[i].second) {
-				Node n(node.LB, UB, node.lambda);
-				
+				Node n(node.LB, UB, node.lambda, node.code+suffix);
+
 				n.forbidden_edges = node.forbidden_edges;
 				n.forbidden_edges.push_back({
 					node.edges[i].first,
@@ -166,6 +173,7 @@ int main(int argc, char** argv) {
 					pq_tree.push(n);
 				}
 				tree_size++;
+				suffix++;
 			}
 		}
 	}

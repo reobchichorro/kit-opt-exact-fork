@@ -13,6 +13,8 @@ void Node::Solve(const vector<vector<double>>& og_cost, vector<vector<double>>& 
 	bool b = false;
 	bool c = false;
 
+	lambda = curr_lambda;
+
 	while (epsilon >= MINEPS && !feasible && !skip) {
 		a = false;
 		b = false;
@@ -44,16 +46,16 @@ void Node::Solve(const vector<vector<double>>& og_cost, vector<vector<double>>& 
 		modG = sqrt(accumulate(g.cbegin(), g.cend(), 0, [](int a, int b){ return a + b*b; }));
 		feasible = modG < EPS;
 
-		if (mst_sol > curr_LB + EPS) {
-			curr_LB = mst_sol;
+		if (mst_sol > LB + EPS) {
+			LB = mst_sol;
 			k = 0;
 			a = true;
-			if (curr_LB > LB) {
-				b = true;
-				LB = curr_LB;
-				lambda = curr_lambda;
-				edges = kr.edges;
-			}
+			lambda = curr_lambda;
+			edges = kr.edges;
+			b = true;
+			// if (curr_LB > LB) {
+			// 	LB = curr_LB;
+			// }
 		}
 		else {
 			k++;
@@ -64,11 +66,12 @@ void Node::Solve(const vector<vector<double>>& og_cost, vector<vector<double>>& 
 		}
 		
 		if (feasible) {
-			if (real_cost < UB) {
+			if (real_cost + EPS < UB) {
 				c = true;
 				UB = min(UB, real_cost);
 				LB = mst_sol;
 				edges = kr.edges;
+				lambda = curr_lambda;
 				// lower_bound = min(lower_bound, node.lower_bound);
 				// cerr << count << " c " << node.feasible << " " << node.lower_bound << " " << upper_bound << " " << node.forbidden_arcs.size() << "\n";
 			}

@@ -24,7 +24,7 @@ typedef vector<ii> vii;
 class Node{
 public:
 	Node(){};
-	Node(double lb, double ub, const vector<double>& _lambda/*, const vector<pair<size_t,size_t>>& _edges*/) { LB = lb; curr_LB = lb; UB = ub; curr_lambda = _lambda; /*edges = _edges;*/ };
+	Node(double lb, double ub, const vector<double>& _lambda/*, const vector<pair<size_t,size_t>>& _edges*/, const string& _code) { LB = lb; UB = ub; curr_lambda = _lambda; /*edges = _edges;*/ code = _code; };
 
 	void Solve(const vector<vector<double>>& og_cost, vector<vector<double>>& cost);
 	
@@ -36,11 +36,12 @@ public:
 	double LB;
 	vector<double> lambda;
 	vector<pair<size_t,size_t>> edges = vector<pair<size_t,size_t>>();
+	string code = "";
 	
 private:
 	double real_cost = 0;
 	vector<double> curr_lambda;
-	double curr_LB;
+	// double curr_LB;
 	vector<pair<size_t,size_t>> curr_edges;
 };
 

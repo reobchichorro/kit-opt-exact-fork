@@ -75,6 +75,7 @@ int main(int argc, char** argv) {
 	size_t tree_size = 1;
 
 	vector<double> lambda(data->getDimension(), 0);
+	vector<double> best_lambda;
 	double epsilon = 0.5;
 	size_t k = 0;
 	double mi = 0;
@@ -135,6 +136,7 @@ int main(int argc, char** argv) {
 
 		if (mst_sol > lower_bound + EPS) {
 			lower_bound = mst_sol;
+			best_lambda = lambda;
 			k = 0;
 		}
 		else {
