@@ -16,6 +16,81 @@ using namespace std;
 #define BRANCHING 0 // 0 for DFS, 1 for BFS, 2 for LB
 #define MAXCOST 99999999
 
+auto cmp = [](Node& a, Node&b){ return a.LB > b.LB; };
+
+void setUBs(unordered_map<string, double>& UBs) {
+	UBs["a280"] = 2579;
+	UBs["ali535"] = 202384;
+	UBs["att48"] = 10628;
+	UBs["att532"] = 27731;
+	UBs["bayg29"] = 1610;
+	UBs["bays29"] = 2020;
+	UBs["berlin52"] = 7542;
+	UBs["bier127"] = 118282;
+	UBs["brazil58"] = 25395;
+	UBs["brg180"] = 1950;
+	UBs["burma14"] = 3323;
+	UBs["ch130"] = 6110;
+	UBs["ch150"] = 6528;
+	UBs["d198"] = 15780;
+	UBs["d493"] = 35042;
+	UBs["dantzig42"] = 699;
+	UBs["eil101"] = 629;
+	UBs["eil51"] = 426;
+	UBs["eil76"] = 538;
+	UBs["fl417"] = 11861;
+	UBs["fri26"] = 937;
+	UBs["gil262"] = 2378.7;
+	UBs["gr120"] = 6942;
+	UBs["gr137"] = 69853;
+	UBs["gr17"] = 2085;
+	UBs["gr202"] = 40160.1;
+	UBs["gr21"] = 2707;
+	UBs["gr229"] = 134613;
+	UBs["gr24"] = 1272;
+	UBs["gr431"] = 171530;
+	UBs["gr48"] = 5046;
+	UBs["gr96"] = 55209;
+	UBs["hk48"] = 11461;
+	UBs["kroA100"] = 21282;
+	UBs["kroA150"] = 26524;
+	UBs["kroA200"] = 29368;
+	UBs["kroB100"] = 22141;
+	UBs["kroB150"] = 26130;
+	UBs["kroB200"] = 29437.2;
+	UBs["kroC100"] = 20749;
+	UBs["kroD100"] = 21294;
+	UBs["kroE100"] = 22068;
+	UBs["lin105"] = 14379;
+	UBs["lin318"] = 42045.7;
+	UBs["linhp318"] = 42053.1;
+	UBs["pcb442"] = 50876;
+	UBs["pr107"] = 44303;
+	UBs["pr124"] = 59030;
+	UBs["pr136"] = 96772;
+	UBs["pr144"] = 58537;
+	UBs["pr152"] = 73682;
+	UBs["pr226"] = 80369;
+	UBs["pr264"] = 49135;
+	UBs["pr299"] = 48194.8;
+	UBs["pr76"] = 108159;
+	UBs["rat195"] = 2326.1;
+	UBs["rat99"] = 1211;
+	UBs["rd100"] = 7910;
+	UBs["rd400"] = 15296.1;
+	UBs["si175"] = 21407;
+	UBs["si535"] = 48466.8;
+	UBs["st70"] = 675;
+	UBs["swiss42"] = 1273;
+	UBs["ts225"] = 126643;
+	UBs["tsp225"] = 3916;
+	UBs["u159"] = 42080;
+	UBs["ulysses16"] = 6859;
+	UBs["ulysses22"] = 7013;
+	for (auto it = UBs.begin(); it != UBs.end(); it++)
+		UBs[it->first] = it->second + 1;
+}
+
 double createInitialSolution(Data *data, const vector<vector<double>>& cost, vector<pair<size_t,size_t>>& edges) {
 	unordered_set<int> remaining;
 	list<size_t> sol; sol.push_back(0);
@@ -40,22 +115,40 @@ double createInitialSolution(Data *data, const vector<vector<double>>& cost, vec
 		nearest = -1;
 		dist_nearest = 99999999;
 	}
+	edges.push_back(make_pair(sol.back(), 0));
 	sol_cost += cost[sol.back()][0];
-	for (size_t i = 0; i < edges.size(); i++) {
-		cout << edges[i].first << "," << edges[i].second << " ";
-	}
-	cout << "\n";
-	for (auto it = sol.cbegin(); it != sol.cend(); it++) {
-		cout << *it << " ";
-	}
-	cout << sol_cost << " init\n";
+	// for (size_t i = 0; i < edges.size(); i++) {
+	// 	cout << edges[i].first << "," << edges[i].second << " ";
+	// }
+	// cout << "\n";
+	// for (auto it = sol.cbegin(); it != sol.cend(); it++) {
+	// 	cout << *it << " ";
+	// }
+	// cout << sol_cost << " init\n";
 	return sol_cost;
+}
+
+double getLB(const list<Node>& tree, const priority_queue<Node, deque<Node>, decltype(cmp)>& pq_tree) {
+	double LB = MAXCOST;
+	if (BRANCHING == 2) {
+		LB = pq_tree.top().LB;
+	}
+	else {
+		for (auto it = tree.cbegin(); it != tree.cend(); it++)
+			LB = min(LB, it->LB);
+	}
+	return LB;
 }
 
 int main(int argc, char** argv) {
 
 	Data* data = new Data(argc, argv[1]);
 	data->readData();
+
+	unordered_map<string, double> UBs;
+	setUBs(UBs);
+	
+	vector <size_t> pset(data->getDimension());
 	
 	vector<vector<double>> og_cost(data->getDimension(), vector<double>(data->getDimension()));
 	vector<vector<double>> cost(data->getDimension(), vector<double>(data->getDimension()));
@@ -66,17 +159,27 @@ int main(int argc, char** argv) {
 		}
 	}
 	
-	vector<pair<size_t,size_t>> edges;
-	double UB = createInitialSolution(data, cost, edges);
-	// double lower_bound = 0;
-	cout << UB << endl;
+	vector<ii> non_zero_edges;
+	for (size_t i = 1; i < cost.size(); ++i) {
+		for (size_t j = i+1; j < cost[i].size(); ++j) {
+			non_zero_edges.push_back( make_pair(i, j) );
+		}
+	}
+	
+	vector<pair<size_t,size_t>> best_edges;
+	vector<pair<size_t,size_t>> node_best_edges;
+	vector<pair<size_t,size_t>> node_curr_edges;
+	double UB = min(createInitialSolution(data, cost, best_edges), UBs[data->getInstanceName()]);
+	node_best_edges = node_curr_edges = best_edges;
+	cout << "Initial UB: " << UB << endl;
+	double LB = 0; // Best LB
 
 	auto lambda = vector<double>(data->getDimension(), 0);
-	Node root = Node(0, UB, lambda, "");
+	auto curr_lambda = vector<double>(data->getDimension(), 0);
+	Node root = Node(0, UB, lambda, curr_lambda, node_best_edges, node_curr_edges);
 
 	list<Node> tree;
-	tree.push_back(root);
-	auto cmp = [](Node& a, Node&b){ return a.LB > b.LB; };
+	tree.push_back(root);	
 	priority_queue<Node, deque<Node>, decltype(cmp)> pq_tree(cmp);
 	pq_tree.push(root);
 	
@@ -86,9 +189,9 @@ int main(int argc, char** argv) {
 
 	size_t skipcount = 0;
 
-	bool first = true;
-
 	long long int count_lim = 5000;
+
+	cout << "Visited Nodes\tSkipped Nodes\tLB\tUB\tTree Size\tGap\n";
 
 	while ((BRANCHING == 2 ? !pq_tree.empty() : !tree.empty()) && count < itmax && tree_size < MAX_TREE_SIZE) {
 		count++;
@@ -107,63 +210,61 @@ int main(int argc, char** argv) {
 		}
 		
 		tree_size--;
-		bool stop = node.code.size() == 1 && node.code[0] != 'c';
+		// bool stop = node.code.size() == 1 && node.code[0] != 'c';
 
 		if (UB < node.LB + EPS) {
 			skipcount++;
 			continue;
 		}
 		node.UB = UB;
-		node.Solve(og_cost, cost);
+		node.Solve(og_cost, cost, pset, non_zero_edges);
 
 		if (count % count_lim == 0) {
-			cerr << count << " " << skipcount << " c " << node.feasible << " " << node.LB << " " << UB << " " << node.forbidden_edges.size() << " " << tree_size << " " << node.code << "\n";
+			LB = getLB(tree, pq_tree);
+			// cerr << count << " " << skipcount << " c " << node.feasible << " " << node.LB << " " << UB << " " << node.forbidden_edges.size() << " " << tree_size << " " << node.code << "\n";
+			cout << count << "\t" << skipcount << "\t" << LB << "\t" << UB << "\t" << tree_size << "\t" << (UB-LB)/LB << "\n";
 			if (count > 10*count_lim)
 				count_lim *= 20;
 		}
 
-		// if (node.LB > UB || node.edges.size() == 0) {
-		// 	skipcount++;
-		// 	continue;
-		// }
-
 		if (node.feasible) {
 			if (node.UB + EPS < UB) {
 				UB = min(UB, node.UB);
-				// lower_bound = min(lower_bound, node.lower_bound);
-				cerr << count << " " << skipcount << " c " << node.feasible << " " << node.LB << " " << UB << " " << node.forbidden_edges.size() << " " << tree_size << " " << node.code << "\n";
-				if (true) {
-					first = false;
-					for (size_t i = 0; i < node.edges.size(); i++) {
-						cerr << node.edges[i].first << "," << node.edges[i].second << " ";
-					}
-					cerr << "\n";
-					for (size_t i = 0; i < node.forbidden_edges.size(); i++) {
-						cerr << node.forbidden_edges[i].first << "," << node.forbidden_edges[i].second << " ";
-					}
-					cerr << "\n";
-					
+				LB = getLB(tree, pq_tree);
+				// cerr << count << " " << skipcount << " c " << node.feasible << " " << node.LB << " " << UB << " " << node.forbidden_edges.size() << " " << tree_size << " " << node.code << "\n";
+				cout << count << "\t" << skipcount << "\t" << LB << "\t" << UB << "\t" << tree_size << "\t" << (UB-LB)/LB << "\tImproved solution found" << "\n";
+				// if (true) {
+				// 	// first = false;
+				// 	for (size_t i = 0; i < node_best_edges.size(); i++) {
+				// 		cerr << node_best_edges[i].first << "," << node_best_edges[i].second << " ";
+				// 	}
+				// 	cerr << "\n";
+				// 	for (size_t i = 0; i < node.forbidden_edges.size(); i++) {
+				// 		cerr << node.forbidden_edges[i].first << "," << node.forbidden_edges[i].second << " ";
+				// 	}
+				// 	cerr << "\n";
+				// }
+				for (size_t i=0; i< best_edges.size(); i++)
+					best_edges[i] = (*node.best_edges)[i];
 				}
-			}
 		}
 
 		// cerr << mst_sol << "\t" << this_lower_bound << "\t" << lower_bound << "\t" << UB << "\n";
-		if (UB < node.LB + EPS || node.edges.size() == 0) {
+		if (UB < node.LB + EPS || !node.improved) {
 			skipcount++;
 			continue;
 		}
 		// cerr << "\n";
 
-		// tree_size -= g[node.biggest]-2;
-		char suffix = 'a';
-		for (size_t i = 0; i < node.edges.size(); i++) {
-			if (node.biggest == node.edges[i].first || node.biggest == node.edges[i].second) {
-				Node n(node.LB, UB, node.lambda, node.code+suffix);
+		// char suffix = 'a';
+		for (size_t i = 0; i < node_best_edges.size(); i++) {
+			if (node.biggest == node_best_edges[i].first || node.biggest == node_best_edges[i].second) {
+				Node n(node.LB, UB, node.lambda, curr_lambda, node_best_edges, node_curr_edges);
 
 				n.forbidden_edges = node.forbidden_edges;
 				n.forbidden_edges.push_back({
-					node.edges[i].first,
-					node.edges[i].second
+					node_best_edges[i].first,
+					node_best_edges[i].second
 				});
 				
 				if (BRANCHING == 0 || BRANCHING == 1) {
@@ -173,12 +274,27 @@ int main(int argc, char** argv) {
 					pq_tree.push(n);
 				}
 				tree_size++;
-				suffix++;
+				// suffix++;
 			}
 		}
 	}
 	// cerr << "\n";
-	cout << data->getInstanceName() << ";" << UB << " " << tree_size << " " << count << endl;
+	if (tree_size == 0) {
+		cout << "Optimal found for " << data->getInstanceName() << "\tOPT\tVisited Nodes\n";
+		cout << "\t" << UB << "\t" << count << "\n";
+	}
+	else {
+		LB = getLB(tree, pq_tree);
+		cout << "Best solution found for " << data->getInstanceName() << "\tUB\tLB\tGap\tVisited Nodes\tTree Size\n";
+		cout << "\t" << UB << "\t" << LB << "\t" << (UB-LB)/LB << count << "\t" << tree_size << "\n";
+	}
+
+
+	cout << "Best solution edges:\n";
+	for (size_t i = 0; i < node_best_edges.size(); i++) {
+		cout << best_edges[i].first << "," << best_edges[i].second << " ";
+	}
+	cout << "\n";
 
 	// for (int i = 0; i < data->getDimension(); i++) delete [] cost[i];
 	// delete [] cost;

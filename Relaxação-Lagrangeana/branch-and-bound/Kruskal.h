@@ -14,24 +14,18 @@ typedef pair<int, int> ii;
 typedef vector<vector<double>> vvi;
 typedef vector<ii> vii;
 
-#define USE_ZERO 0
-#define TWO_CLOSEST 1
-
 class Kruskal{
 public:
-	Kruskal(const vvi& dist, int zero_setup);
+	Kruskal(const vvi& _dist, int zero_setup, vector <size_t>& _pset, vector<ii>& _non_zero_edges, vector<pair<size_t,size_t>>* _edges);
+	~Kruskal();
 
 	double MST(size_t nodes);
-	vector<pair<size_t,size_t>> getEdges();
-	vector<pair<size_t,size_t>> edges;
-
-	int zero_setup;
+	vector<pair<size_t,size_t>>* edges;
 
 private:
-	// priority_queue <pair<double,ii> > graph;
-	vector<pair<double, ii>> non_zero_edges;
-	vector <size_t> pset;
-	vector<double> zero_edges;
+	vector<ii>* non_zero_edges;
+	vector <size_t>* pset;
+	const vvi* dist;
 
 	void initDisjoint(size_t n);
 	size_t findSet(size_t i);
