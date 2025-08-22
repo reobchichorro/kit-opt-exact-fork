@@ -13,7 +13,7 @@
 using namespace std;
 #define EPS 1e-6
 #define MAX_TREE_SIZE 1e+8
-#define BRANCHING 0 // 0 for DFS, 1 for BFS, 2 for LB
+#define BRANCHING 2 // 0 for DFS, 1 for BFS, 2 for LB
 #define MAXCOST 99999999
 
 auto cmp = [](Node& a, Node&b){ return a.LB > b.LB; };
@@ -159,6 +159,7 @@ int main(int argc, char** argv) {
 		}
 	}
 	
+	vector<int> g(cost.size());
 	vector<ii> non_zero_edges;
 	for (size_t i = 1; i < cost.size(); ++i) {
 		for (size_t j = i+1; j < cost[i].size(); ++j) {
@@ -184,12 +185,12 @@ int main(int argc, char** argv) {
 	pq_tree.push(root);
 	
 	long long int count = 0;
-	long long int itmax = 10000000;
+	long long int itmax = 100000;
 	size_t tree_size = 1;
 
 	size_t skipcount = 0;
 
-	long long int count_lim = 5000;
+	long long int count_lim = 1000;
 
 	cout << "Visited Nodes\tSkipped Nodes\tLB\tUB\tTree Size\tGap\n";
 
@@ -217,14 +218,14 @@ int main(int argc, char** argv) {
 			continue;
 		}
 		node.UB = UB;
-		node.Solve(og_cost, cost, pset, non_zero_edges);
+		node.Solve(og_cost, cost, pset, non_zero_edges, g);
 
 		if (count % count_lim == 0) {
 			LB = getLB(tree, pq_tree);
 			// cerr << count << " " << skipcount << " c " << node.feasible << " " << node.LB << " " << UB << " " << node.forbidden_edges.size() << " " << tree_size << " " << node.code << "\n";
-			cout << count << "\t" << skipcount << "\t" << LB << "\t" << UB << "\t" << tree_size << "\t" << (UB-LB)/LB << "\n";
+			cout << count << "\t" << skipcount << "\t" << LB << "\t" << UB << "\t" << tree_size << "\t" << (UB-LB)/LB << endl;
 			if (count > 10*count_lim)
-				count_lim *= 20;
+				count_lim *= 2;
 		}
 
 		if (node.feasible) {

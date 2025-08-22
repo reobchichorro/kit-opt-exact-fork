@@ -17,13 +17,12 @@ Node::~Node(){
 	curr_edges = NULL;
 }
 
-void Node::Solve(const vector<vector<double>>& og_cost, vector<vector<double>>& cost, vector <size_t>& _pset, vector<ii>& _non_zero_edges) {
+void Node::Solve(const vector<vector<double>>& og_cost, vector<vector<double>>& cost, vector <size_t>& _pset, vector<ii>& _non_zero_edges, vector<int>& g) {
 	int count = 0;
 	
 	double epsilon = INITEPS;
 	size_t k = 0;
 	double mi = 0;
-	vector<int> g(cost.size(), 2);
 	double modG = 0;
 	bool skip = false;
 
@@ -37,6 +36,7 @@ void Node::Solve(const vector<vector<double>>& og_cost, vector<vector<double>>& 
 			for (size_t j = i+1; j < cost.size(); j++) {
 				cost[i][j] = og_cost[i][j] - (*curr_lambda)[i] - (*curr_lambda)[j];
 			}
+			g[i] = 2;
 		}
 
 		for (auto it = forbidden_edges.cbegin(); it != forbidden_edges.cend(); it++) {
@@ -46,7 +46,6 @@ void Node::Solve(const vector<vector<double>>& og_cost, vector<vector<double>>& 
 		double mst_sol = kr.MST(cost.size());
 		double real_cost = 0;
 
-		g = vector<int>(cost.size(), 2);
 		for (size_t i = 0; i < (*curr_edges).size(); i++) {
 			g[(*curr_edges)[i].first]--;
 			g[(*curr_edges)[i].second]--;
@@ -105,7 +104,9 @@ void Node::Solve(const vector<vector<double>>& og_cost, vector<vector<double>>& 
 	if (!improved)
 		return;
 	
-	g = vector<int>(cost.size(), 0);
+	for (size_t i = 0; i < cost.size(); i++) {
+		g[i] = 0;
+	}
 	for (size_t i = 0; i < (*best_edges).size(); i++) {
 		g[(*best_edges)[i].first]++;
 		g[(*best_edges)[i].second]++;

@@ -12,8 +12,8 @@
 using namespace std;
 
 #define EPS 1e-6
-#define MINEPS 1e-5
-#define KMAX 10
+#define MINEPS 1e-4
+#define KMAX 5
 #define MAXCOST 99999999
 #define INITEPS 0.5
 
@@ -27,7 +27,7 @@ public:
 	Node(double lb, double ub, const vector<double>& _lambda, vector<double>& _curr_lambda, vector<pair<size_t,size_t>>& _best_edges, vector<pair<size_t,size_t>>& _curr_edges);
 	~Node();
 
-	void Solve(const vector<vector<double>>& og_cost, vector<vector<double>>& cost, vector <size_t>& _pset, vector<ii>& _non_zero_edges);
+	void Solve(const vector<vector<double>>& og_cost, vector<vector<double>>& cost, vector <size_t>& _pset, vector<ii>& _non_zero_edges, vector<int>& g);
 	
 	double UB;
 	vector<pair<int, int>> forbidden_edges = vector<pair<int, int>>();
