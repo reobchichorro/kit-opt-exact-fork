@@ -194,6 +194,7 @@ int main(int argc, char** argv) {
 	size_t skipcount = 0;
 
 	long long int count_lim = 1000;
+	bool updateLB = false;
 
 	cout << "Visited Nodes\tSkipped Nodes\tLB\tUB\tTree Size\tGap\n";
 
@@ -220,11 +221,13 @@ int main(int argc, char** argv) {
 			skipcount++;
 			continue;
 		}
+		updateLB = node.LB == LB;
+
 		node.UB = UB;
 		node.Solve(og_cost, cost, pset, non_zero_edges, g);
 
 		if (count % count_lim == 0) {
-			LB = getLB(tree, pq_tree);
+			// LB = getLB(tree, pq_tree);
 			// cerr << count << " " << skipcount << " c " << node.feasible << " " << node.LB << " " << UB << " " << node.forbidden_edges.size() << " " << tree_size << " " << node.code << "\n";
 			cout << count << "\t" << skipcount << "\t" << LB << "\t" << UB << "\t" << tree_size << "\t" << (UB-LB)/LB << endl;
 			if (count > 10*count_lim)
@@ -235,6 +238,7 @@ int main(int argc, char** argv) {
 			if (node.UB + EPS < UB) {
 				UB = min(UB, node.UB);
 				LB = getLB(tree, pq_tree);
+				updateLB = false;
 				// cerr << count << " " << skipcount << " c " << node.feasible << " " << node.LB << " " << UB << " " << node.forbidden_edges.size() << " " << tree_size << " " << node.code << "\n";
 				cout << count << "\t" << skipcount << "\t" << LB << "\t" << UB << "\t" << tree_size << "\t" << (UB-LB)/LB << "\tImproved solution found" << "\n";
 				// if (true) {
@@ -255,6 +259,8 @@ int main(int argc, char** argv) {
 
 		// cerr << mst_sol << "\t" << this_lower_bound << "\t" << lower_bound << "\t" << UB << "\n";
 		if (UB < node.LB + EPS || !node.improved) {
+			if (updateLB)
+				LB = getLB(tree,pq_tree);
 			skipcount++;
 			continue;
 		}
@@ -281,6 +287,8 @@ int main(int argc, char** argv) {
 				// suffix++;
 			}
 		}
+		if (updateLB)
+			LB = getLB(tree,pq_tree);
 	}
 	// cerr << "\n";
 	if (tree_size != 0) {
@@ -288,12 +296,12 @@ int main(int argc, char** argv) {
 		cout << "Best solution found for " << data->getInstanceName() << "\tUB\tLB\tGap\tVisited Nodes\tTree Size\n";
 		cout << "\t" << UB << "\t" << LB << "\t" << (UB-LB)/LB << count << "\t" << tree_size << "\n";
 	}
-	else if (abs(UB - LB) < EPS) {
+	else if (UB - LB < EPS) {
 		cout << "Optimal found for " << data->getInstanceName() << "\tOPT\tVisited Nodes\n";
 		cout << "\t" << UB << "\t" << count << "\n";
 	} else {
-		cout << "Optimal found? for " << data->getInstanceName() << "\tOPT\tVisited Nodes\n";
-		cout << "\t" << UB << "\t" << count << "\n";
+		cout << "Optimal found? for " << data->getInstanceName() << "\tOPT\tLB\tVisited Nodes\n";
+		cout << "\t" << UB << "\t" << LB << "\t" << count << "\n";
 	}
 
 
