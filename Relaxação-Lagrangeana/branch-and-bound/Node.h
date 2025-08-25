@@ -13,9 +13,9 @@ using namespace std;
 
 #define EPS 1e-6
 #define MINEPS 1e-4
-#define KMAX 5
+#define KMAX 8
 #define MAXCOST 99999999
-#define INITEPS 0.5
+#define INITEPS 1
 
 typedef pair<int, int> ii;
 typedef vector<vector<double>> vvi;

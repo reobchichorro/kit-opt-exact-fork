@@ -156,7 +156,9 @@ int main(int argc, char** argv) {
 		for (int j = 0; j < data->getDimension(); j++) {
 			og_cost[i][j] = data->getDistance(i,j);
 			cost[i][j] = data->getDistance(i,j);
+			// cerr << og_cost[i][j] << "\t";
 		}
+		// cerr << "\n";
 	}
 	
 	vector<int> g(cost.size());
@@ -164,6 +166,7 @@ int main(int argc, char** argv) {
 	for (size_t i = 1; i < cost.size(); ++i) {
 		for (size_t j = i+1; j < cost[i].size(); ++j) {
 			non_zero_edges.push_back( make_pair(i, j) );
+			// cerr << i << "\t" << j << "\n";
 		}
 	}
 	
@@ -280,14 +283,17 @@ int main(int argc, char** argv) {
 		}
 	}
 	// cerr << "\n";
-	if (tree_size == 0) {
-		cout << "Optimal found for " << data->getInstanceName() << "\tOPT\tVisited Nodes\n";
-		cout << "\t" << UB << "\t" << count << "\n";
-	}
-	else {
+	if (tree_size != 0) {
 		LB = getLB(tree, pq_tree);
 		cout << "Best solution found for " << data->getInstanceName() << "\tUB\tLB\tGap\tVisited Nodes\tTree Size\n";
 		cout << "\t" << UB << "\t" << LB << "\t" << (UB-LB)/LB << count << "\t" << tree_size << "\n";
+	}
+	else if (abs(UB - LB) < EPS) {
+		cout << "Optimal found for " << data->getInstanceName() << "\tOPT\tVisited Nodes\n";
+		cout << "\t" << UB << "\t" << count << "\n";
+	} else {
+		cout << "Optimal found? for " << data->getInstanceName() << "\tOPT\tVisited Nodes\n";
+		cout << "\t" << UB << "\t" << count << "\n";
 	}
 
 

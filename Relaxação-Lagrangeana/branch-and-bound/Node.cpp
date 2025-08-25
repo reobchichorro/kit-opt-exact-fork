@@ -23,39 +23,46 @@ void Node::Solve(const vector<vector<double>>& og_cost, vector<vector<double>>& 
 	double epsilon = INITEPS;
 	size_t k = 0;
 	double mi = 0;
-	double modG = 0;
+	long long int len2G = 0;
 	bool skip = false;
 
 	for (size_t i=0; i< lambda.size(); i++)
 		(*curr_lambda)[i] = lambda[i];
 
+	// cout << "Cnt\tG2\tMST\teps\tk\n";
 	while (epsilon >= MINEPS && !feasible && !skip) {
 		count++;
+		// cerr << count << " count\n";
 		feasible = true;
+		double mst_sol = 0;
 		for (size_t i = 0; i < cost.size(); i++) {
 			for (size_t j = i+1; j < cost.size(); j++) {
 				cost[i][j] = og_cost[i][j] - (*curr_lambda)[i] - (*curr_lambda)[j];
 			}
 			g[i] = 2;
+			mst_sol += 2*(*curr_lambda)[i];
 		}
 
 		for (auto it = forbidden_edges.cbegin(); it != forbidden_edges.cend(); it++) {
 			cost[(*it).first][(*it).second] = MAXCOST;
 		}
 		Kruskal kr(cost, 1, _pset, _non_zero_edges, curr_edges);
-		double mst_sol = kr.MST(cost.size());
+		mst_sol += kr.MST(cost.size());
+
 		double real_cost = 0;
 
 		for (size_t i = 0; i < (*curr_edges).size(); i++) {
 			g[(*curr_edges)[i].first]--;
 			g[(*curr_edges)[i].second]--;
 			real_cost += og_cost[(*curr_edges)[i].first][(*curr_edges)[i].second];
-			// cout << (*edges)[i].first << "," << (*edges)[i].second << " ";
+			// if (count==1)
+			// cerr << (*curr_edges)[i].first << "\t" << (*curr_edges)[i].second << "\n";
 		}
-		// cout << "\n";
 		
-		modG = sqrt(accumulate(g.cbegin(), g.cend(), 0, [](int a, int b){ return a + b*b; }));
-		feasible = modG < EPS;
+		len2G = accumulate(g.cbegin(), g.cend(), 0, [](int a, int b){ return a + b*b; });
+		feasible = len2G == 0;
+
+		// cout << count << "\t" << (int)(modG*modG) << "\t" << mst_sol << "\t" << epsilon << "\t" << k << "\n";
 
 		if (mst_sol > LB + EPS) {
 			improved = true;
@@ -83,21 +90,20 @@ void Node::Solve(const vector<vector<double>>& og_cost, vector<vector<double>>& 
 					lambda[i] = (*curr_lambda)[i];
 				for (size_t i=0; i< (*best_edges).size(); i++)
 					(*best_edges)[i] = (*curr_edges)[i];
-				// lower_bound = min(lower_bound, node.lower_bound);
-				// cerr << count << " c " << node.feasible << " " << node.lower_bound << " " << upper_bound << " " << node.forbidden_arcs.size() << "\n";
 			}
 		}
 		else {
-			mi = epsilon*(UB - mst_sol)/modG;
+			mi = epsilon*(UB - mst_sol)/(len2G);
 	
 			// cerr << mst_sol << "\t" << this_lower_bound << "\t" << lower_bound << "\t" << upper_bound << "\n";
 			for (size_t i = 0; i < (*curr_lambda).size(); i++) {
 				(*curr_lambda)[i] += mi*g[i];
+				// if ((*curr_lambda)[i] < 0)
+				// 	(*curr_lambda)[i] = 0;
 				if ((*curr_lambda)[i] > MAXCOST/2 || (*curr_lambda)[i] < -MAXCOST/2)
 					skip = true;
-				// cout << lambda[i] << " ";
+				// cerr << (*curr_lambda)[i] << "\n";
 			}
-			// cout << "\n";
 		}
 	}
 	// cerr << "haha\n";
@@ -111,7 +117,7 @@ void Node::Solve(const vector<vector<double>>& og_cost, vector<vector<double>>& 
 		g[(*best_edges)[i].first]++;
 		g[(*best_edges)[i].second]++;
 		real_cost += og_cost[(*best_edges)[i].first][(*best_edges)[i].second];
-		// cout << edges[i].first << "," << edges[i].second << " ";
+		// cout << (*best_edges)[i].first << "," << (*best_edges)[i].second << " ";
 	}
 	// cout << "\n";
 	for (size_t i = 1; i < g.size(); i++) {
