@@ -41,10 +41,10 @@ bool Kruskal::isSameSet(size_t i, size_t j){
 	return (findSet(i) == findSet(j))? true:false;
 }
 
-double Kruskal::MST(size_t nodes){
+long double Kruskal::MST(size_t nodes){
 	initDisjoint(nodes);
 
-	double cost = 0;
+	long double cost = 0;
 	size_t graphsize = 0;
 
 	for (auto it = (*non_zero_edges).cbegin(); it != (*non_zero_edges).cend(); it++) {

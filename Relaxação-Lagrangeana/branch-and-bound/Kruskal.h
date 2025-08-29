@@ -11,7 +11,7 @@
 using namespace std;
 
 typedef pair<int, int> ii;
-typedef vector<vector<double>> vvi;
+typedef vector<vector<long double>> vvi;
 typedef vector<ii> vii;
 
 class Kruskal{
@@ -19,7 +19,7 @@ public:
 	Kruskal(const vvi& _dist, int zero_setup, vector <size_t>& _pset, vector<ii>& _non_zero_edges, vector<pair<size_t,size_t>>* _edges);
 	~Kruskal();
 
-	double MST(size_t nodes);
+	long double MST(size_t nodes);
 	vector<pair<size_t,size_t>>* edges;
 
 private:

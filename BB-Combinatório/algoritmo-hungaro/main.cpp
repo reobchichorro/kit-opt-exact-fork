@@ -176,7 +176,7 @@ int main(int argc, char** argv) {
 
 		if (count % 500000 == 0) {
 			for (int i = 0; i < data->getDimension(); i++) {
-				cerr << p.successors[i] << "\t";
+				cerr << i << "," << p.successors[i] << "\t";
 			}
 			cerr << "\n";
 			cerr << count << " c " << node.feasible << " " << node.chosen_subtour.size() << " " << node.lower_bound << " " << upper_bound << " " << node.forbidden_arcs.size() << "\n";		// tree.erase(node);
@@ -191,7 +191,7 @@ int main(int argc, char** argv) {
 		if (node.feasible) {
 			if (node.lower_bound < upper_bound + EPS) {
 				for (int i = 0; i < data->getDimension(); i++) {
-					cerr << p.successors[i] << "\t";
+					cerr << i << "," << p.successors[i] << "\t";
 				}
 				cerr << "\n\t";
 				upper_bound = min(upper_bound, node.lower_bound);

@@ -18,7 +18,7 @@ using namespace std;
 
 auto cmp = [](Node& a, Node&b){ return a.LB > b.LB; };
 
-void setUBs(unordered_map<string, double>& UBs) {
+void setUBs(unordered_map<string, long double>& UBs) {
 	UBs["a280"] = 2579;
 	UBs["ali535"] = 202384;
 	UBs["att48"] = 10628;
@@ -91,15 +91,15 @@ void setUBs(unordered_map<string, double>& UBs) {
 		UBs[it->first] = it->second + 1;
 }
 
-double createInitialSolution(Data *data, const vector<vector<double>>& cost, vector<pair<size_t,size_t>>& edges) {
+long double createInitialSolution(Data *data, const vector<vector<long double>>& cost, vector<pair<size_t,size_t>>& edges) {
 	unordered_set<int> remaining;
 	list<size_t> sol; sol.push_back(0);
 	for (int i = 1; i < data->getDimension(); i++)
 		remaining.insert(i);
 	
-	double sol_cost = 0;
+	long double sol_cost = 0;
 	size_t nearest = -1;
-	double dist_nearest = 99999999;
+	long double dist_nearest = 99999999;
 	pair<size_t,size_t> curr_edge;
 	while (!remaining.empty()) {
 		for (auto it = remaining.begin(); it != remaining.end(); it++) {
@@ -128,8 +128,8 @@ double createInitialSolution(Data *data, const vector<vector<double>>& cost, vec
 	return sol_cost;
 }
 
-double getLB(const list<Node>& tree, const priority_queue<Node, deque<Node>, decltype(cmp)>& pq_tree) {
-	double LB = MAXCOST;
+long double getLB(const list<Node>& tree, const priority_queue<Node, deque<Node>, decltype(cmp)>& pq_tree) {
+	long double LB = MAXCOST;
 	if (BRANCHING == 2) {
 		LB = pq_tree.top().LB;
 	}
@@ -145,13 +145,13 @@ int main(int argc, char** argv) {
 	Data* data = new Data(argc, argv[1]);
 	data->readData();
 
-	unordered_map<string, double> UBs;
+	unordered_map<string, long double> UBs;
 	setUBs(UBs);
 	
 	vector <size_t> pset(data->getDimension());
 	
-	vector<vector<double>> og_cost(data->getDimension(), vector<double>(data->getDimension()));
-	vector<vector<double>> cost(data->getDimension(), vector<double>(data->getDimension()));
+	vector<vector<long double>> og_cost(data->getDimension(), vector<long double>(data->getDimension()));
+	vector<vector<long double>> cost(data->getDimension(), vector<long double>(data->getDimension()));
 	for (int i = 0; i < data->getDimension(); i++) {
 		for (int j = 0; j < data->getDimension(); j++) {
 			og_cost[i][j] = data->getDistance(i,j);
@@ -173,13 +173,13 @@ int main(int argc, char** argv) {
 	vector<pair<size_t,size_t>> best_edges;
 	vector<pair<size_t,size_t>> node_best_edges;
 	vector<pair<size_t,size_t>> node_curr_edges;
-	double UB = min(createInitialSolution(data, cost, best_edges), UBs[data->getInstanceName()]);
+	long double UB = min(createInitialSolution(data, cost, best_edges), UBs[data->getInstanceName()]);
 	node_best_edges = node_curr_edges = best_edges;
 	cout << "Initial UB: " << UB << endl;
-	double LB = 0; // Best LB
+	long double LB = 0; // Best LB
 
-	auto lambda = vector<double>(data->getDimension(), 0);
-	auto curr_lambda = vector<double>(data->getDimension(), 0);
+	auto lambda = vector<long double>(data->getDimension(), 0);
+	auto curr_lambda = vector<long double>(data->getDimension(), 0);
 	Node root = Node(0, UB, lambda, curr_lambda, node_best_edges, node_curr_edges);
 
 	list<Node> tree;
@@ -228,7 +228,6 @@ int main(int argc, char** argv) {
 
 		if (count % count_lim == 0) {
 			// LB = getLB(tree, pq_tree);
-			// cerr << count << " " << skipcount << " c " << node.feasible << " " << node.LB << " " << UB << " " << node.forbidden_edges.size() << " " << tree_size << " " << node.code << "\n";
 			cout << count << "\t" << skipcount << "\t" << LB << "\t" << UB << "\t" << tree_size << "\t" << (UB-LB)/LB << endl;
 			if (count > 10*count_lim)
 				count_lim *= 2;
@@ -239,32 +238,30 @@ int main(int argc, char** argv) {
 				UB = min(UB, node.UB);
 				LB = getLB(tree, pq_tree);
 				updateLB = false;
-				// cerr << count << " " << skipcount << " c " << node.feasible << " " << node.LB << " " << UB << " " << node.forbidden_edges.size() << " " << tree_size << " " << node.code << "\n";
 				cout << count << "\t" << skipcount << "\t" << LB << "\t" << UB << "\t" << tree_size << "\t" << (UB-LB)/LB << "\tImproved solution found" << "\n";
 				// if (true) {
 				// 	// first = false;
 				// 	for (size_t i = 0; i < node_best_edges.size(); i++) {
-				// 		cerr << node_best_edges[i].first << "," << node_best_edges[i].second << " ";
+				// 		cout << node_best_edges[i].first << "," << node_best_edges[i].second << " ";
 				// 	}
-				// 	cerr << "\n";
+				// 	cout << "\n";
 				// 	for (size_t i = 0; i < node.forbidden_edges.size(); i++) {
-				// 		cerr << node.forbidden_edges[i].first << "," << node.forbidden_edges[i].second << " ";
+				// 		cout << node.forbidden_edges[i].first << "," << node.forbidden_edges[i].second << " ";
 				// 	}
-				// 	cerr << "\n";
+				// 	cout << "\n";
 				// }
 				for (size_t i=0; i< best_edges.size(); i++)
 					best_edges[i] = (*node.best_edges)[i];
 				}
 		}
 
-		// cerr << mst_sol << "\t" << this_lower_bound << "\t" << lower_bound << "\t" << UB << "\n";
+		// cout << mst_sol << "\t" << this_lower_bound << "\t" << lower_bound << "\t" << UB << "\n";
 		if (UB < node.LB + EPS || !node.improved) {
 			if (updateLB)
 				LB = getLB(tree,pq_tree);
 			skipcount++;
 			continue;
 		}
-		// cerr << "\n";
 
 		// char suffix = 'a';
 		for (size_t i = 0; i < node_best_edges.size(); i++) {
@@ -290,7 +287,7 @@ int main(int argc, char** argv) {
 		if (updateLB)
 			LB = getLB(tree,pq_tree);
 	}
-	// cerr << "\n";
+	
 	if (tree_size != 0) {
 		LB = getLB(tree, pq_tree);
 		cout << "Best solution found for " << data->getInstanceName() << "\tUB\tLB\tGap\tVisited Nodes\tTree Size\n";
