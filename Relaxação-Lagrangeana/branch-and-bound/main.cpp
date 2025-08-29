@@ -252,7 +252,7 @@ int main(int argc, char** argv) {
 				// }
 				for (size_t i=0; i< best_edges.size(); i++)
 					best_edges[i] = (*node.best_edges)[i];
-				}
+			}
 		}
 
 		// cout << mst_sol << "\t" << this_lower_bound << "\t" << lower_bound << "\t" << UB << "\n";
