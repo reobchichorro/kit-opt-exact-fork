@@ -1,6 +1,7 @@
 #include "separation.h"
 
 vector <vector<int> > MaxBack(double** x, int n) {
+    // kit's MaxBack finds one subtour. The method here needs to return ALL subtours
     vector<vector<int>> ans = vector<vector<int>>(1, vector<int>(1,0));
     vector<double> maxback_val = vector<double>(n,0);
     for (int i = 0; i < n; i++) {
