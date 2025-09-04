@@ -24,17 +24,18 @@ void Node::Solve(const vector<vector<long double>>& og_cost, vector<vector<long 
 	size_t k = 0;
 	long double mi = 0;
 	long long int len2G = 0;
-	bool skip = false;
+	bool keep_going = true;
+	long double mst_sol = 0;
 
 	for (size_t i=0; i< lambda.size(); i++)
 		(*curr_lambda)[i] = lambda[i];
 
 	// cout << "\tCnt\tG2\tMST\tRealCost\teps\tk\n";
-	while (epsilon >= MINEPS && !feasible && !skip && LB < UB) {
+	while (keep_going) {
 		count++;
 		// cerr << count << " count\n";
 		feasible = true;
-		long double mst_sol = 0;
+		mst_sol = 0;
 		for (size_t i = 0; i < cost.size(); i++) {
 			for (size_t j = i+1; j < cost.size(); j++) {
 				cost[i][j] = og_cost[i][j] - (*curr_lambda)[i] - (*curr_lambda)[j];
@@ -62,8 +63,8 @@ void Node::Solve(const vector<vector<long double>>& og_cost, vector<vector<long 
 		len2G = accumulate(g.cbegin(), g.cend(), 0, [](int a, int b){ return a + b*b; });
 		feasible = len2G == 0;
 
-		// cout << "\t" << count << "\t" << len2G << "\t" << mst_sol << "\t" << real_cost << "\t" << epsilon << "\t" << k << "\n";
-		// if (len2G <= 4 && UB > 1272 && UB < 1274) {
+		// if (len2G <= 2 && mst_sol > 674 && mst_sol < 676) {
+		// 	cout << "\t" << count << "\t" << len2G << "\t" << mst_sol << "\t" << real_cost << "\t" << epsilon << "\t" << k << "\n";
 		// 	cout << "\tLambda:\n\t\t";
 		// 	for (size_t i=0; i< lambda.size(); i++)
 		// 		cout << (*curr_lambda)[i] << "\t";
@@ -73,8 +74,11 @@ void Node::Solve(const vector<vector<long double>>& og_cost, vector<vector<long 
 		// 	cout << "\n";
 		// }
 
-		if (mst_sol > LB + EPS) {
-			LB = mst_sol;
+		if (mst_sol >= UB) { // Might be wrong for TSP, since OBJ oscilates
+			keep_going = false;
+		}
+		else if (mst_sol > LB) {// + EPS) {
+			LB = max(mst_sol, LB);
 			improved = LB < UB;
 			k = 0;
 			for (size_t i=0; i< lambda.size(); i++)
@@ -84,17 +88,22 @@ void Node::Solve(const vector<vector<long double>>& og_cost, vector<vector<long 
 		}
 		else {
 			k++;
+			if (feasible)
+				cerr << "aqui\n";
 			if (k >= KMAX) {
 				k = 0;
 				epsilon /= 2;
 			}
 		}
-		
+
 		if (feasible) {
+			if (abs(real_cost-mst_sol) > EPS) {
+				cerr << count << "\t" << mst_sol << "\t" << real_cost << "\t" << LB << "\t" << UB << "\n";
+			}
 			if (real_cost + EPS < UB) {
 				UB = min(UB, real_cost);
 				improved = true;
-				LB = mst_sol;
+				LB = max(mst_sol, LB);
 				for (size_t i=0; i< lambda.size(); i++)
 					lambda[i] = (*curr_lambda)[i];
 				for (size_t i=0; i< (*best_edges).size(); i++)
@@ -103,17 +112,21 @@ void Node::Solve(const vector<vector<long double>>& og_cost, vector<vector<long 
 		}
 		else {
 			mi = epsilon*(UB - mst_sol)/(len2G);
-	
 			for (size_t i = 0; i < (*curr_lambda).size(); i++) {
 				(*curr_lambda)[i] += mi*g[i];
 				// if ((*curr_lambda)[i] < 0)
 				// 	(*curr_lambda)[i] = 0;
 				if ((*curr_lambda)[i] > MAXCOST/2 || (*curr_lambda)[i] < -MAXCOST/2)
-					skip = true;
+					keep_going = false;
 				// cerr << (*curr_lambda)[i] << "\n";
 			}
 		}
+
+		if (epsilon < MINEPS || feasible)// || mst_sol >= UB)
+			keep_going = false;
+		// keep_going = epsilon >= MINEPS && !feasible && !skip && LB < UB;
 	}
+	
 	// cerr << "haha\n";
 	if (!improved)
 		return;

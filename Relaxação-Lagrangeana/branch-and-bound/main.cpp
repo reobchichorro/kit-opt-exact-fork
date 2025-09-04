@@ -128,16 +128,17 @@ long double createInitialSolution(Data *data, const vector<vector<long double>>&
 	return sol_cost;
 }
 
-long double getLB(const list<Node>& tree, const priority_queue<Node, deque<Node>, decltype(cmp)>& pq_tree) {
+long double getLB(const list<Node>& tree, const priority_queue<Node, deque<Node>, decltype(cmp)>& pq_tree, long double feas_lb) {
 	long double LB = MAXCOST;
 	if (BRANCHING == 2) {
-		LB = pq_tree.top().LB;
+		if (!pq_tree.empty())
+			LB = pq_tree.top().LB;
 	}
 	else {
 		for (auto it = tree.cbegin(); it != tree.cend(); it++)
 			LB = min(LB, it->LB);
 	}
-	return LB;
+	return min(LB, feas_lb);
 }
 
 int main(int argc, char** argv) {
@@ -177,6 +178,7 @@ int main(int argc, char** argv) {
 	node_best_edges = node_curr_edges = best_edges;
 	cout << "Initial UB: " << UB << endl;
 	long double LB = 0; // Best LB
+	long double feas_lb = MAXCOST; // LB of current best feasible solution
 
 	auto lambda = vector<long double>(data->getDimension(), 0);
 	auto curr_lambda = vector<long double>(data->getDimension(), 0);
@@ -193,7 +195,7 @@ int main(int argc, char** argv) {
 
 	size_t skipcount = 0;
 
-	long long int count_lim = 1000;
+	long long int count_lim = 250;
 	bool updateLB = false;
 
 	cout << "Visited Nodes\tSkipped Nodes\tLB\tUB\tTree Size\tGap\n";
@@ -219,6 +221,7 @@ int main(int argc, char** argv) {
 
 		if (UB < node.LB + EPS) {
 			skipcount++;
+			// cout << count << "\t" << skipcount << "\t" << LB << "\t" << UB << "\t" << tree_size << "\t" << (UB-LB)/LB << "\t" << node.LB << "\tSkipped\n";
 			continue;
 		}
 		updateLB = node.LB == LB;
@@ -229,14 +232,15 @@ int main(int argc, char** argv) {
 		if (count % count_lim == 0) {
 			// LB = getLB(tree, pq_tree);
 			cout << count << "\t" << skipcount << "\t" << LB << "\t" << UB << "\t" << tree_size << "\t" << (UB-LB)/LB << endl;
-			if (count > 10*count_lim)
+			if (count >= 10*count_lim)
 				count_lim *= 2;
 		}
 
 		if (node.feasible) {
 			if (node.UB + EPS < UB) {
 				UB = min(UB, node.UB);
-				LB = getLB(tree, pq_tree);
+				feas_lb = node.LB;
+				LB = getLB(tree, pq_tree, feas_lb);
 				updateLB = false;
 				cout << count << "\t" << skipcount << "\t" << LB << "\t" << UB << "\t" << tree_size << "\t" << (UB-LB)/LB << "\tImproved solution found" << "\n";
 				// if (true) {
@@ -254,50 +258,53 @@ int main(int argc, char** argv) {
 					best_edges[i] = (*node.best_edges)[i];
 			}
 		}
-
-		// cout << mst_sol << "\t" << this_lower_bound << "\t" << lower_bound << "\t" << UB << "\n";
-		if (UB < node.LB + EPS || !node.improved) {
+		else if (UB < node.LB + EPS || !node.improved) {
 			if (updateLB)
-				LB = getLB(tree,pq_tree);
+				LB = getLB(tree, pq_tree, feas_lb);
 			skipcount++;
+			// if (node.improved)
+			// 	cout << count << "\t" << skipcount << "\t" << LB << "\t" << UB << "\t" << tree_size << "\t" << (UB-LB)/LB << "\t" << node.LB << "\tDead end\n";
+			// else
+			// 	cout << count << "\t" << skipcount << "\t" << LB << "\t" << UB << "\t" << tree_size << "\t" << (UB-LB)/LB << "\tNot improved\n";
 			continue;
-		}
-
-		// char suffix = 'a';
-		for (size_t i = 0; i < node_best_edges.size(); i++) {
-			if (node.biggest == node_best_edges[i].first || node.biggest == node_best_edges[i].second) {
-				Node n(node.LB, UB, node.lambda, curr_lambda, node_best_edges, node_curr_edges);
-
-				n.forbidden_edges = node.forbidden_edges;
-				n.forbidden_edges.push_back({
-					node_best_edges[i].first,
-					node_best_edges[i].second
-				});
-				
-				if (BRANCHING == 0 || BRANCHING == 1) {
-					tree.push_back(n);
+		} else {
+			// char suffix = 'a';
+			for (size_t i = 0; i < node_best_edges.size(); i++) {
+				if (node.biggest == node_best_edges[i].first || node.biggest == node_best_edges[i].second) {
+					Node n(node.LB, UB, node.lambda, curr_lambda, node_best_edges, node_curr_edges);
+	
+					n.forbidden_edges = node.forbidden_edges;
+					n.forbidden_edges.push_back({
+						node_best_edges[i].first,
+						node_best_edges[i].second
+					});
+					
+					if (BRANCHING == 0 || BRANCHING == 1) {
+						tree.push_back(n);
+					}
+					else if (BRANCHING == 2) {
+						pq_tree.push(n);
+					}
+					tree_size++;
+					// suffix++;
 				}
-				else if (BRANCHING == 2) {
-					pq_tree.push(n);
-				}
-				tree_size++;
-				// suffix++;
 			}
 		}
+
 		if (updateLB)
-			LB = getLB(tree,pq_tree);
+			LB = getLB(tree,pq_tree, feas_lb);
 	}
+	LB = getLB(tree, pq_tree, feas_lb);
 	
 	if (tree_size != 0) {
-		LB = getLB(tree, pq_tree);
-		cout << "Best solution found for " << data->getInstanceName() << "\tUB\tLB\tGap\tVisited Nodes\tTree Size\n";
+		cout << "\nBest solution found for " << data->getInstanceName() << "\tUB\tLB\tGap\tVisited Nodes\tTree Size\n";
 		cout << "\t" << UB << "\t" << LB << "\t" << (UB-LB)/LB << count << "\t" << tree_size << "\n";
 	}
 	else if (UB - LB < EPS) {
-		cout << "Optimal found for " << data->getInstanceName() << "\tOPT\tVisited Nodes\n";
+		cout << "\nOptimal found for " << data->getInstanceName() << "\tOPT\tVisited Nodes\n";
 		cout << "\t" << UB << "\t" << count << "\n";
 	} else {
-		cout << "Optimal found? for " << data->getInstanceName() << "\tOPT\tLB\tVisited Nodes\n";
+		cout << "\nOptimal found? for " << data->getInstanceName() << "\tOPT\tLB\tVisited Nodes\n";
 		cout << "\t" << UB << "\t" << LB << "\t" << count << "\n";
 	}
 
