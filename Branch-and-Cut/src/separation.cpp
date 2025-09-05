@@ -44,6 +44,11 @@ vector <vector<int> > MaxBack(double** x, int n) {
         Ss.push_back({s0});
 
         for (int k = 1; k < n; k++) { // Always iterates n-1 times, which should be equal to |V|-|S_0|
+            if (abs(cut_val) < EPSILON) {
+                cerr << k << "/" << n << " break " << cut_val << "\n";
+                break;
+            }
+
             int i = -1;
             bool first = true;
             for (int j = 0; j < n; j++) {
