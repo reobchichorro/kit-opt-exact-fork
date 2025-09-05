@@ -13,7 +13,7 @@ CPPC = g++
 #############################
 
 #### opcoes de compilacao e includes
-CCOPT = $(BITS_OPTION) -O2 -fPIC -fexceptions -DNDEBUG -DIL_STD -std=c++0x -g
+CCOPT = $(BITS_OPTION) -O3 -fPIC -fexceptions -DNDEBUG -DIL_STD -std=c++0x -g
 CONCERTINCDIR = $(CONCERTDIR)/include
 CPLEXINCDIR   = $(CPLEXDIR)/include
 CCFLAGS = $(CCOPT) -I$(CPLEXINCDIR) -I$(CONCERTINCDIR) -I./include
@@ -34,7 +34,7 @@ OBJS = $(patsubst $(SRCDIR)/%.cpp, $(OBJDIR)/%.o, $(SRCS))
 #############################
 
 #### regra principal, gera o executavel
-bc: $(OBJS) 
+bc.out: $(OBJS) 
 	@echo  "\033[31m \nLinking all objects files: \033[0m"
 	$(CPPC) $(BITS_OPTION) $(OBJS) -o $@ $(CCLNFLAGS)
 ############################
@@ -56,7 +56,7 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
 #delete objetos e arquivos de dependencia
 clean:
 	@echo "\033[31mcleaning obj directory \033[0m"
-	@rm bc -f $(OBJDIR)/*.o $(OBJDIR)/*.d
+	@rm bc.out -f $(OBJDIR)/*.o $(OBJDIR)/*.d
 
 
-rebuild: clean bc
+rebuild: clean bc.out

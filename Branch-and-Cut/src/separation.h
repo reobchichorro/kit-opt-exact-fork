@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <iterator>
 #include <pthread.h>
+#include <unordered_set>
 
 #define EPSILON 0.00000001
 

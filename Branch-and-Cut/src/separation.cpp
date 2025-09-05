@@ -2,46 +2,84 @@
 
 vector <vector<int> > MaxBack(double** x, int n) {
     // kit's MaxBack finds one subtour. The method here needs to return ALL subtours
-    vector<vector<int>> ans = vector<vector<int>>(1, vector<int>(1,0));
-    vector<double> maxback_val = vector<double>(n,0);
-    for (int i = 0; i < n; i++) {
-        maxback_val[i] = x[0][i];
-	}
-    double cut_val = 0;
-    for (int i = 1; i < n; i++) {
-        cut_val += x[0][i];
-	}
-    double mincut_val = cut_val;
+    vector<vector<int>> Ss; // TODO find better name
+    vector<bool> found = vector<bool>(n,false); // Which vertices are in one of Ss' vectors
 
-    for (int k = 1; k < n; k++) {
-        int i = -1;
-        double max_maxback_val = 0;
-        for (int j = 1; j < n; j++) {
-            bool skip = false;
-            for (size_t jj = 0; jj < ans[k-1].size(); jj++) {
-                if (j == ans[k-1][jj]) {
-                    skip = true;
-                    break;
+    // To be reset at each iteration
+    vector<double> maxback_val = vector<double>(n);
+
+    // for (int i = 0; i < n; i++) {
+    //     for (int j = i + 1; j < n; j++) {
+    //         if (x[i][j] > 0.1)
+    //             cerr << i << "-" << j << "," << x[i][j] << " ";
+    //         else if (x[i][j] > EPSILON)
+    //             cerr << "eps-" << i << "-" << j << "," << x[i][j] << " ";
+    //     }
+    // }
+    // cerr << "\n";
+
+    for (int s0 = 0; s0 < n; s0++) {
+        if (found[s0])
+            continue;
+        found[s0] = true;
+        vector<bool> Sk(n, false);
+        Sk[s0] = true;
+        
+        for (int i = 0; i < s0; i++) {
+            maxback_val[i] = x[i][s0];
+        }
+        for (int i = s0; i < n; i++) {
+            maxback_val[i] = x[s0][i];
+        }
+
+        double cut_val = 0;
+        for (int i = 0; i < s0; i++) {
+            cut_val += x[i][s0];
+        }
+        for (int i = s0+1; i < n; i++) {
+            cut_val += x[s0][i];
+        }
+        double mincut_val = cut_val;
+
+        Ss.push_back({s0});
+
+        for (int k = 1; k < n; k++) { // Always iterates n-1 times, which should be equal to |V|-|S_0|
+            int i = -1;
+            bool first = true;
+            for (int j = 0; j < n; j++) {
+                if (Sk[j])
+                    continue;
+                
+                if (first || maxback_val[j] > maxback_val[i]) {
+                    i = j;
+                    first = false;
                 }
             }
-            if (skip)
-                continue;
-            
-            if (maxback_val[j] > max_maxback_val) {
-                max_maxback_val = maxback_val[j];
-                i = j;
+            Sk[i] = true;
+
+            cut_val += 2 -2 * maxback_val[i]; // TODO If this is 0, algorithm can be stopped because a subtour was found.
+            for (int j = 0; j < n; j++) {
+                if (Sk[j])
+                    continue;
+                maxback_val[j] += (i < j) ? (x[i][j]) : (x[j][i]);
+            }
+
+            if (cut_val + EPSILON < mincut_val) {
+                mincut_val = cut_val;
+                Ss.back() = vector<int>();
+                for (int j = 0; j < n; j++)
+                    if (Sk[j])
+                        Ss.back().push_back(j);
             }
         }
-        ans.push_back(vector<int>(ans[k-1].size()+1, 0));
-        for (size_t ii = 0; i < ans[k-1].size(); ii++) {
-            ans[k][ii] = ans[k-1][ii];
-        }
-        ans[k][ans[k-1].size()] = i;
-        cut_val += 2 -2 * maxback_val[i]; // TODO substitute 2 for degree(i)
 
+        for (auto it = Ss.back().cbegin(); it != Ss.back().cend(); it++)
+            found[*it] = true;
     }
-
-    return ans;
+    if (Ss.size() == 1 && Ss[0].size() == n)
+        Ss = vector<vector<int>>();
+        
+    return Ss;
 }
 
 vector <vector<int> > MinCut(double** x, int n) {
