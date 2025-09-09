@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 #include <vector>
 #include <list>
 #include <unordered_set>
@@ -15,56 +16,81 @@ using namespace std;
 #define MAX_TREE_SIZE 1e+8
 #define BRANCHING 2 // 0 for DFS, 1 for BFS, 2 for LB
 #define MAXCOST 99999999
+#define FIXED_FLOAT(y, x) fixed << setprecision(y) << (x)
+#define R_SETW(x) right << setw(x)
 
 auto cmp = [](Node& a, Node&b){ return a.LB > b.LB; };
 
 void setUBs(unordered_map<string, long double>& UBs) {
 	UBs["a280"] = 2579;
-	UBs["ali535"] = 202384;
+	UBs["ali535"] = 202339;
 	UBs["att48"] = 10628;
-	UBs["att532"] = 27731;
+	UBs["att532"] = 27686;
 	UBs["bayg29"] = 1610;
 	UBs["bays29"] = 2020;
 	UBs["berlin52"] = 7542;
 	UBs["bier127"] = 118282;
 	UBs["brazil58"] = 25395;
+	UBs["brd14051"] = 469385;
 	UBs["brg180"] = 1950;
 	UBs["burma14"] = 3323;
 	UBs["ch130"] = 6110;
 	UBs["ch150"] = 6528;
 	UBs["d198"] = 15780;
-	UBs["d493"] = 35042;
+	UBs["d493"] = 35002;
+	UBs["d657"] = 48912;
+	UBs["d1291"] = 50801;
+	UBs["d1655"] = 62128;
+	UBs["d2103"] = 80450;
+	UBs["d15112"] = 1573084;
+	UBs["d18512"] = 645238;
 	UBs["dantzig42"] = 699;
-	UBs["eil101"] = 629;
+	UBs["dsj1000euc_2d"] = 18659688;
+	UBs["dsj1000ceil_2d"] = 18660188;
 	UBs["eil51"] = 426;
 	UBs["eil76"] = 538;
+	UBs["eil101"] = 629;
 	UBs["fl417"] = 11861;
+	UBs["fl1400"] = 20127;
+	UBs["fl1577"] = 22249;
+	UBs["fl3795"] = 28772;
+	UBs["fnl4461"] = 182566;
 	UBs["fri26"] = 937;
-	UBs["gil262"] = 2378.7;
-	UBs["gr120"] = 6942;
-	UBs["gr137"] = 69853;
+	UBs["gil262"] = 2378;
 	UBs["gr17"] = 2085;
-	UBs["gr202"] = 40160.1;
 	UBs["gr21"] = 2707;
-	UBs["gr229"] = 134613;
 	UBs["gr24"] = 1272;
-	UBs["gr431"] = 171530;
 	UBs["gr48"] = 5046;
 	UBs["gr96"] = 55209;
+	UBs["gr120"] = 6942;
+	UBs["gr137"] = 69853;
+	UBs["gr202"] = 40160;
+	UBs["gr229"] = 134602;
+	UBs["gr431"] = 171414;
+	UBs["gr666"] = 294358;
 	UBs["hk48"] = 11461;
 	UBs["kroA100"] = 21282;
-	UBs["kroA150"] = 26524;
-	UBs["kroA200"] = 29368;
 	UBs["kroB100"] = 22141;
-	UBs["kroB150"] = 26130;
-	UBs["kroB200"] = 29437.2;
 	UBs["kroC100"] = 20749;
 	UBs["kroD100"] = 21294;
 	UBs["kroE100"] = 22068;
+	UBs["kroA150"] = 26524;
+	UBs["kroB150"] = 26130;
+	UBs["kroA200"] = 29368;
+	UBs["kroB200"] = 29437;
 	UBs["lin105"] = 14379;
-	UBs["lin318"] = 42045.7;
-	UBs["linhp318"] = 42053.1;
-	UBs["pcb442"] = 50876;
+	UBs["lin318"] = 42029;
+	UBs["linhp318"] = 41345;
+	UBs["nrw1379"] = 56638;
+	UBs["p654"] = 34643;
+	UBs["pa561"] = 2763;
+	UBs["pcb442"] = 50778;
+	UBs["pcb1173"] = 56892;
+	UBs["pcb3038"] = 137694;
+	UBs["pla7397"] = 23260728;
+	UBs["pla33810"] = 66048945;
+	UBs["pla85900"] = 142382641;
+	UBs["pr76"] = 108159;
 	UBs["pr107"] = 44303;
 	UBs["pr124"] = 59030;
 	UBs["pr136"] = 96772;
@@ -72,21 +98,42 @@ void setUBs(unordered_map<string, long double>& UBs) {
 	UBs["pr152"] = 73682;
 	UBs["pr226"] = 80369;
 	UBs["pr264"] = 49135;
-	UBs["pr299"] = 48194.8;
-	UBs["pr76"] = 108159;
-	UBs["rat195"] = 2326.1;
+	UBs["pr299"] = 48191;
+	UBs["pr439"] = 107217;
+	UBs["pr1002"] = 259045;
+	UBs["pr2392"] = 378032;
 	UBs["rat99"] = 1211;
+	UBs["rat195"] = 2323;
+	UBs["rat575"] = 6773;
+	UBs["rat783"] = 8806;
 	UBs["rd100"] = 7910;
-	UBs["rd400"] = 15296.1;
+	UBs["rd400"] = 15281;
+	UBs["rl1304"] = 252948;
+	UBs["rl1323"] = 270199;
+	UBs["rl1889"] = 316536;
+	UBs["rl5915"] = 565530;
+	UBs["rl5934"] = 556045;
+	UBs["rl11849"] = 923288;
 	UBs["si175"] = 21407;
-	UBs["si535"] = 48466.8;
+	UBs["si535"] = 48450;
+	UBs["si1032"] = 92650;
 	UBs["st70"] = 675;
 	UBs["swiss42"] = 1273;
 	UBs["ts225"] = 126643;
 	UBs["tsp225"] = 3916;
 	UBs["u159"] = 42080;
+	UBs["u574"] = 36905;
+	UBs["u724"] = 41910;
+	UBs["u1060"] = 224094;
+	UBs["u1432"] = 152970;
+	UBs["u1817"] = 57201;
+	UBs["u2152"] = 64253;
+	UBs["u2319"] = 234256;
 	UBs["ulysses16"] = 6859;
 	UBs["ulysses22"] = 7013;
+	UBs["usa13509"] = 19982859;
+	UBs["vm1084"] = 239297;
+	UBs["vm1748"] = 336556;
 	for (auto it = UBs.begin(); it != UBs.end(); it++)
 		UBs[it->first] = it->second + 1;
 }
@@ -176,7 +223,7 @@ int main(int argc, char** argv) {
 	vector<pair<size_t,size_t>> node_curr_edges;
 	long double UB = min(createInitialSolution(data, cost, best_edges), UBs[data->getInstanceName()]);
 	node_best_edges = node_curr_edges = best_edges;
-	cout << "Initial UB: " << UB << endl;
+	cout << "Initial UB: " << UB << "\n" << endl;
 	long double LB = 0; // Best LB
 	long double feas_lb = MAXCOST; // LB of current best feasible solution
 
@@ -198,7 +245,8 @@ int main(int argc, char** argv) {
 	long long int count_lim = 250;
 	bool updateLB = false;
 
-	cout << "Visited Nodes\tSkipped Nodes\tLB\tUB\tTree Size\tGap\n";
+	// cout << "Visited Nodes\tSkipped Nodes\tLB\tUB\tTree Size\tGap\n";
+	cout << "    Visited Nodes  Tree Size  Objective  Best Integer  Best Bound       Gap  Skipped Nodes\n";
 
 	while ((BRANCHING == 2 ? !pq_tree.empty() : !tree.empty()) && count < itmax && tree_size < MAX_TREE_SIZE) {
 		count++;
@@ -231,7 +279,8 @@ int main(int argc, char** argv) {
 
 		if (count % count_lim == 0) {
 			// LB = getLB(tree, pq_tree);
-			cout << count << "\t" << skipcount << "\t" << LB << "\t" << UB << "\t" << tree_size << "\t" << (UB-LB)/LB << endl;
+			// cout << count << "\t" << skipcount << "\t" << LB << "\t" << UB << "\t" << tree_size << "\t" << (UB-LB)/LB << endl;
+			cout << R_SETW(17) << count << R_SETW(11) << tree_size << R_SETW(11) << FIXED_FLOAT(2,node.getRealCost()) << R_SETW(14) << FIXED_FLOAT(2,UB) << R_SETW(12) << FIXED_FLOAT(2,LB) << R_SETW(10) << FIXED_FLOAT(6,(UB-LB)/LB) << R_SETW(15) << skipcount << endl;
 			if (count >= 10*count_lim)
 				count_lim *= 2;
 		}
@@ -242,7 +291,10 @@ int main(int argc, char** argv) {
 				feas_lb = node.LB;
 				LB = getLB(tree, pq_tree, feas_lb);
 				updateLB = false;
-				cout << count << "\t" << skipcount << "\t" << LB << "\t" << UB << "\t" << tree_size << "\t" << (UB-LB)/LB << "\tImproved solution found" << "\n";
+				// cout << count << "\t" << skipcount << "\t" << LB << "\t" << UB << "\t" << tree_size << "\t" << (UB-LB)/LB << "\tImproved solution found" << "\n";
+				cout << "Improved solution found:\n";
+				cout << R_SETW(17) << count << R_SETW(11) << tree_size << R_SETW(11) << FIXED_FLOAT(2,node.getRealCost()) << R_SETW(14) << FIXED_FLOAT(2,UB) << R_SETW(12) << FIXED_FLOAT(2,LB) << R_SETW(10) << FIXED_FLOAT(6,(UB-LB)/LB) << R_SETW(15) << skipcount << endl;
+				// cout << count << "\t" << tree_size << "\t" << FIXED_FLOAT(2,node.getRealCost()) << "\t" << FIXED_FLOAT(2,UB) << "\t" << FIXED_FLOAT(2,LB) << "\t" << FIXED_FLOAT(6,(UB-LB)/LB) << "\t" << skipcount << endl;
 				// if (true) {
 				// 	// first = false;
 				// 	for (size_t i = 0; i < node_best_edges.size(); i++) {
@@ -297,19 +349,29 @@ int main(int argc, char** argv) {
 	LB = getLB(tree, pq_tree, feas_lb);
 	
 	if (tree_size != 0) {
-		cout << "\nBest solution found for " << data->getInstanceName() << "\tUB\tLB\tGap\tVisited Nodes\tTree Size\n";
-		cout << "\t" << UB << "\t" << LB << "\t" << (UB-LB)/LB << count << "\t" << tree_size << "\n";
+		cout << "\nBest solution found for " << data->getInstanceName() << ":\n";// << "\tUB\tLB\tGap\tVisited Nodes\tTree Size\n";
+		cout << "LB: " << FIXED_FLOAT(2,LB) << "\n";
+		cout << "UB: " << FIXED_FLOAT(2,UB) << "\n";
+		cout << "Gap: " << FIXED_FLOAT(6,(UB-LB)/LB) << "\n";
+		cout << "Visited Nodes: " << count << "\n";
+		cout << "Unvisited nodes remaining: " << tree_size << "\n";
+		// cout << "\t" << FIXED_FLOAT(2,UB) << "\t" << FIXED_FLOAT(2,LB) << "\t" << FIXED_FLOAT(6,(UB-LB)/LB) << "\t" << count << "\t" << tree_size << "\n";
 	}
 	else if (UB - LB < EPS) {
-		cout << "\nOptimal found for " << data->getInstanceName() << "\tOPT\tVisited Nodes\n";
-		cout << "\t" << UB << "\t" << count << "\n";
+		cout << "\nOptimal found for " << data->getInstanceName() << ":\n";// << "\tOPT\tVisited Nodes\n";
+		cout << "LB: " << FIXED_FLOAT(2,LB) << "\n";
+		cout << "UB: " << FIXED_FLOAT(2,UB) << "\n";
+		cout << "Visited Nodes: " << count << "\n";
+		// cout << "\t" << FIXED_FLOAT(2,UB) << "\t" << count << "\n";
 	} else {
-		cout << "\nOptimal found? for " << data->getInstanceName() << "\tOPT\tLB\tVisited Nodes\n";
-		cout << "\t" << UB << "\t" << LB << "\t" << count << "\n";
+		cout << "\nOptimal found? for " << data->getInstanceName() << ":\n";// << "\tOPT\tLB\tVisited Nodes\n";
+		cout << "LB: " << FIXED_FLOAT(2,LB) << "\n";
+		cout << "UB: " << FIXED_FLOAT(2,UB) << "\n";
+		cout << "Visited Nodes: " << count << "\n";
+		// cout << "\t" << FIXED_FLOAT(2,UB) << "\t" << FIXED_FLOAT(2,LB) << "\t" << count << "\n";
 	}
 
-
-	cout << "Best solution edges:\n";
+	cout << "\nBest solution edges:\n";
 	for (size_t i = 0; i < node_best_edges.size(); i++) {
 		cout << best_edges[i].first << "," << best_edges[i].second << " ";
 	}

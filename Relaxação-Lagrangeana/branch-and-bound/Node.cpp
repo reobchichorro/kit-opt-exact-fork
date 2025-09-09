@@ -152,3 +152,7 @@ void Node::Solve(const vector<vector<long double>>& og_cost, vector<vector<long 
 
 	// cout << LB << " " << UB << " " << count << " " << biggest << " " << g[biggest] << " " << forbidden_edges.size() << "\n";
 }
+
+long double Node::getRealCost() const {
+	return real_cost;
+}

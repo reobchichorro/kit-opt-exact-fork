@@ -39,6 +39,8 @@ public:
 	vector<long double> lambda;
 	vector<pair<size_t,size_t>>* best_edges;
 	// string code = "";
+
+	long double getRealCost() const;
 	
 private:
 	long double real_cost = 0;
