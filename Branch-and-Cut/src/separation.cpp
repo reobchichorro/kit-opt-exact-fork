@@ -1,6 +1,7 @@
 #include "separation.h"
 
 vector <vector<int> > MaxBack(double** x, int n) {
+    cerr << "Maxback\n";
     // kit's MaxBack finds one subtour. The method here needs to return ALL subtours
     vector<vector<int>> Ss; // TODO find better name
     vector<bool> found = vector<bool>(n,false); // Which vertices are in one of Ss' vectors
@@ -83,6 +84,12 @@ vector <vector<int> > MaxBack(double** x, int n) {
     }
     if (Ss.size() == 1 && Ss[0].size() == n)
         Ss = vector<vector<int>>();
+
+    for (size_t i=0; i<Ss.size(); i++) {
+        for (size_t j=0; j<Ss[i].size(); j++)
+            cerr << Ss[i][j] << ",";
+        cerr << "\n";
+    }
         
     return Ss;
 }
@@ -93,149 +100,185 @@ vector <vector<int> > MaxBack(double** x, int n) {
 
 vector <vector<int> > MinCut(double** x, int n) {
     cerr << "mincut\n";
-    vector<vector<int>> Ss = vector<vector<int>>(1, vector<int>());
-    double mincut_val = MAXFLOAT;
-    vector<int> disjointed_set(n);
-    double** xx = new double*[n];
-    list<int> remaining;
-	for (int i = 0; i < n; i++) {
-        disjointed_set[i] = i;
-        remaining.push_back(i);
-		xx[i] = new double[n];
-        for (int j = i; j < n; j++) {
-            xx[i][j] = x[i][j];
-        }
-	}
+    vector<vector<int>> Ss;
+    vector<bool> found = vector<bool>(n,false); // Which vertices are in one of Ss' vectors
 
     vector<double> degree(n,0);
 
-    int nn = n;
-    int s0 = 0;
-
-    for (int k = 1; k < n; k++) {
-        //Below: cut_val, s, t = MaxBackStep();
-        vector<double> maxback_val = vector<double>(n, -3); // Using -3 as a dummy value. Positions that have -3 should never be accessed.
-        vector<int> insertion_order(nn,-1);
-        vector<bool> Sk(n, false);
-        Sk[s0] = true;
-        insertion_order[0] = s0;
-
-        // for (int i = 0; i < nn; i++) {
-        //     maxback_val[i] = xx[0][i];
-        //     degree[i] = 0;
-        // }
-
-        for (auto it = remaining.cbegin(); it != remaining.cend(); it++) {
-            if (s0 < *it) {
-                maxback_val[*it] = xx[s0][*it];
-            } else {
-                maxback_val[*it] = xx[*it][s0];                
-            }
-            degree[*it] = 0;
+    for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+            if (x[i][j] > 0.1)
+                cerr << i << "-" << j << "," << x[i][j] << " ";
+            else if (x[i][j] > EPSILON)
+                cerr << "eps-" << i << "-" << j << "," << x[i][j] << " ";
         }
+    }
+    cerr << "\n";
 
-        for (auto it = remaining.cbegin(); it != remaining.cend(); it++) {
-            for (auto itj = it; itj != remaining.cend(); itj++) {
-                degree[*it] += xx[*it][*itj];
-                degree[*itj] += xx[*it][*itj];
-            }
-        }
+   for (int s0 = 0; s0 < n; s0++) {
+        if (found[s0])
+            continue;
 
-        double cut_val = 0; // arrumar
-        for (auto it = remaining.cbegin(); it != remaining.cend(); it++) {
-            if (s0 < *it) {
-                cut_val += xx[s0][*it];
-            } else if (s0 > *it) {
-                cut_val += xx[*it][s0];                
-            }
-        }
+        double mincut_val = MAXFLOAT;
 
-        for (int kk = 1; kk < nn; kk++) {
-            int i = -1;
-            bool first = true;
-            
-            for (auto it = remaining.cbegin(); it != remaining.cend(); it++) {
-                if (Sk[*it])
-                    continue;
-                
-                if (first || maxback_val[*it] > maxback_val[i]) {
-                    i = *it;
-                    first = false;
-                }
-            }
-            Sk[i] = true;
-            insertion_order[kk] = i;
-
-            cut_val += degree[i] -2 * maxback_val[i];
-            for (auto it = remaining.cbegin(); it != remaining.cend(); it++) {
-                if (Sk[*it])
-                    continue;
-                maxback_val[*it] += (i < *it) ? (xx[i][*it]) : (xx[*it][i]);
-            }
-        }
-        
-        int s = (*(insertion_order.rbegin()+1));
-        int t = (*insertion_order.rbegin());
-
-        if (cut_val + EPSILON < mincut_val) {
-            mincut_val = cut_val;
-            Ss[0] = vector<int>();
-            for (int j = 0; j < n; j++) {
-                if (disjointed_set[j] == t)
-                    Ss[0].push_back(j);
-            }
-        }
-
-        if (t < s)
-            swap(s, t);
-        
-        for (int j = 0; j < n; j++)
-            if (disjointed_set[j] == t)
-                disjointed_set[j] = s;
-
-        remaining.remove(t);
-
-        nn--;
-        double** xxx = new double*[n];
+        vector<int> disjointed_set(n);
+        double** xx = new double*[n];
+        list<int> remaining;
         for (int i = 0; i < n; i++) {
-            xxx[i] = new double[n];
+            disjointed_set[i] = i;
+            remaining.push_back(i);
+            xx[i] = new double[n];
             for (int j = i; j < n; j++) {
-                if (disjointed_set[i] != s) {
-                    if (disjointed_set[j] != s)
-                        xxx[i][j] = xx[i][j];
-                    else
-                        xxx[i][j] = (s<i ? xx[s][i] : xx[i][s]) + (t<i ? xx[t][i] : xx[i][t]);    
-                }
-                else {
-                    xxx[i][j] = (s<j ? xx[s][j] : xx[j][s]) + (t<j ? xx[t][j] : xx[j][t]);
-                }
+                xx[i][j] = x[i][j];
             }
         }
 
+        int nn = n;
+        Ss.push_back({s0});
+
+        for (int k = 1; k < n; k++) {
+            //Below: cut_val, s, t = MaxBackStep();
+            vector<double> maxback_val = vector<double>(n, -3); // Using -3 as a dummy value. Positions that have -3 should never be accessed.
+            vector<int> insertion_order(nn,-1);
+            vector<bool> Sk(n, false);
+            Sk[s0] = true;
+            insertion_order[0] = s0;
+
+            // for (int i = 0; i < nn; i++) {
+            //     maxback_val[i] = xx[0][i];
+            //     degree[i] = 0;
+            // }
+
+            for (auto it = remaining.cbegin(); it != remaining.cend(); it++) {
+                if (s0 < *it) {
+                    maxback_val[*it] = xx[s0][*it];
+                } else {
+                    maxback_val[*it] = xx[*it][s0];                
+                }
+                degree[*it] = 0;
+            }
+
+            for (auto it = remaining.cbegin(); it != remaining.cend(); it++) {
+                for (auto itj = it; itj != remaining.cend(); itj++) {
+                    degree[*it] += xx[*it][*itj];
+                    degree[*itj] += xx[*it][*itj];
+                }
+            }
+
+            double cut_val = 0;
+            for (auto it = remaining.cbegin(); it != remaining.cend(); it++) {
+                if (s0 < *it) {
+                    cut_val += xx[s0][*it];
+                } else if (s0 > *it) {
+                    cut_val += xx[*it][s0];                
+                }
+            }
+
+            for (int kk = 1; kk < nn; kk++) {
+                int i = -1;
+                bool first = true;
+                
+                for (auto it = remaining.cbegin(); it != remaining.cend(); it++) {
+                    if (Sk[*it])
+                        continue;
+                    
+                    if (first || maxback_val[*it] > maxback_val[i]) {
+                        i = *it;
+                        first = false;
+                    }
+                }
+                Sk[i] = true;
+                insertion_order[kk] = i;
+
+                cut_val += degree[i] -2 * maxback_val[i];
+                for (auto it = remaining.cbegin(); it != remaining.cend(); it++) {
+                    if (Sk[*it])
+                        continue;
+                    maxback_val[*it] += (i < *it) ? (xx[i][*it]) : (xx[*it][i]);
+                }
+            }
+            
+            int s = (*(insertion_order.rbegin()+1));
+            int t = (*insertion_order.rbegin());
+
+            if (cut_val + EPSILON < mincut_val) {
+                mincut_val = cut_val;
+                Ss.back() = vector<int>();
+                for (int j = 0; j < n; j++) {
+                    if (disjointed_set[j] == t)
+                        Ss.back().push_back(j);
+                }
+            }
+
+            if (t < s)
+                swap(s, t);
+            
+            for (int j = 0; j < n; j++)
+                if (disjointed_set[j] == t)
+                    disjointed_set[j] = s;
+
+            remaining.remove(t);
+
+            nn--;
+            double** xxx = new double*[n];
+            for (int i = 0; i < n; i++) {
+                xxx[i] = new double[n];
+                for (int j = i; j < n; j++) {
+                    if (disjointed_set[i] != s) {
+                        if (disjointed_set[j] != s)
+                            xxx[i][j] = xx[i][j];
+                        else
+                            xxx[i][j] = (s<i ? xx[s][i] : xx[i][s]) + (t<i ? xx[t][i] : xx[i][t]);    
+                    }
+                    else {
+                        xxx[i][j] = (s<j ? xx[s][j] : xx[j][s]) + (t<j ? xx[t][j] : xx[j][t]);
+                    }
+                }
+            }
+
+            for (int i = 0; i < n; i++) {
+                delete[] xx[i];
+            }
+            delete[] xx;
+
+            xx = xxx;
+            xxx = NULL;
+
+            if (abs(mincut_val) < EPSILON) {
+                Ss = vector<vector<int>>();
+                break;
+            }
+        }
+
+        vector<bool> inSs(n, false);
+        for (auto it = Ss.back().cbegin(); it != Ss.back().cend(); it++) {
+            inSs[*it] = true;
+        }
+
+        Ss.back() = vector<int>();
         for (int i = 0; i < n; i++) {
+            found[i] = found[i] || !inSs[i];
+            if (!inSs[i])
+                Ss.back().push_back(i);
+        }
+
+        for (int i = 0; i < nn; i++) {
             delete[] xx[i];
         }
         delete[] xx;
-
-        xx = xxx;
-        xxx = NULL;
-
-        if (abs(mincut_val) < EPSILON) {
-            Ss = vector<vector<int>>();
-            break;
-        }
     }
-
+    
     // if (Ss[0].size() == 0 || Ss[0].size() == n)
     //     Ss[0] = {0};
 
-    for (int i = 0; i < nn; i++) {
-		delete[] xx[i];
-	}
-	delete[] xx;
+    if (Ss.size() == 1 && Ss[0].size() == n)
+        Ss = vector<vector<int>>();
 
-    if (Ss.size() == 0)
-        return Ss;
+    for (size_t i=0; i<Ss.size(); i++) {
+        for (size_t j=0; j<Ss[i].size(); j++)
+            cerr << Ss[i][j] << ",";
+        cerr << "\n";
+    }
     
     // vector<bool> inSs(n, false);
     // for (size_t k = 0; k < Ss[0].size(); k++) {
