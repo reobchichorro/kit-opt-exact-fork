@@ -87,14 +87,20 @@ vector <vector<int> > MaxBack(double** x, int n) {
     return Ss;
 }
 
+// void MinCutStep(double** x, int n, vector<int>& S, int s0) {
+    
+// }
+
 vector <vector<int> > MinCut(double** x, int n) {
-    // cerr << "mincut\n";
-    vector<vector<int>> Ss = vector<vector<int>>(2, vector<int>());
+    cerr << "mincut\n";
+    vector<vector<int>> Ss = vector<vector<int>>(1, vector<int>());
     double mincut_val = MAXFLOAT;
     vector<int> disjointed_set(n);
     double** xx = new double*[n];
+    list<int> remaining;
 	for (int i = 0; i < n; i++) {
         disjointed_set[i] = i;
+        remaining.push_back(i);
 		xx[i] = new double[n];
         for (int j = i; j < n; j++) {
             xx[i][j] = x[i][j];
@@ -104,40 +110,56 @@ vector <vector<int> > MinCut(double** x, int n) {
     vector<double> degree(n,0);
 
     int nn = n;
+    int s0 = 0;
 
     for (int k = 1; k < n; k++) {
         //Below: cut_val, s, t = MaxBackStep();
-        vector<double> maxback_val = vector<double>(nn);
-        vector<int> insertion_order(nn,0);
-        vector<bool> Sk(nn, false);
-        Sk[0] = true;
+        vector<double> maxback_val = vector<double>(n, -3); // Using -3 as a dummy value. Positions that have -3 should never be accessed.
+        vector<int> insertion_order(nn,-1);
+        vector<bool> Sk(n, false);
+        Sk[s0] = true;
+        insertion_order[0] = s0;
 
-        for (int i = 0; i < nn; i++) {
-            maxback_val[i] = xx[0][i];
-            degree[i] = 0;
+        // for (int i = 0; i < nn; i++) {
+        //     maxback_val[i] = xx[0][i];
+        //     degree[i] = 0;
+        // }
+
+        for (auto it = remaining.cbegin(); it != remaining.cend(); it++) {
+            if (s0 < *it) {
+                maxback_val[*it] = xx[s0][*it];
+            } else {
+                maxback_val[*it] = xx[*it][s0];                
+            }
+            degree[*it] = 0;
         }
-        
-        for (int i = 0; i < nn; i++) {
-            for (int j = i+1; j < nn; j++) {
-                degree[i] += xx[i][j];
-                degree[j] += xx[i][j];
+
+        for (auto it = remaining.cbegin(); it != remaining.cend(); it++) {
+            for (auto itj = it; itj != remaining.cend(); itj++) {
+                degree[*it] += xx[*it][*itj];
+                degree[*itj] += xx[*it][*itj];
             }
         }
 
-        double cut_val = 0;
-        for (int i = 1; i < nn; i++) {
-            cut_val += xx[0][i];
+        double cut_val = 0; // arrumar
+        for (auto it = remaining.cbegin(); it != remaining.cend(); it++) {
+            if (s0 < *it) {
+                cut_val += xx[s0][*it];
+            } else if (s0 > *it) {
+                cut_val += xx[*it][s0];                
+            }
         }
 
         for (int kk = 1; kk < nn; kk++) {
             int i = -1;
             bool first = true;
-            for (int j = 1; j < nn; j++) { // we can ignore 0 because kk starts from 0, thus Sk[0] will always be true.
-                if (Sk[j])
+            
+            for (auto it = remaining.cbegin(); it != remaining.cend(); it++) {
+                if (Sk[*it])
                     continue;
                 
-                if (first || maxback_val[j] > maxback_val[i]) {
-                    i = j;
+                if (first || maxback_val[*it] > maxback_val[i]) {
+                    i = *it;
                     first = false;
                 }
             }
@@ -145,10 +167,10 @@ vector <vector<int> > MinCut(double** x, int n) {
             insertion_order[kk] = i;
 
             cut_val += degree[i] -2 * maxback_val[i];
-            for (int j = 0; j < nn; j++) {
-                if (Sk[j])
+            for (auto it = remaining.cbegin(); it != remaining.cend(); it++) {
+                if (Sk[*it])
                     continue;
-                maxback_val[j] += (i < j) ? (xx[i][j]) : (xx[j][i]);
+                maxback_val[*it] += (i < *it) ? (xx[i][*it]) : (xx[*it][i]);
             }
         }
         
@@ -171,20 +193,26 @@ vector <vector<int> > MinCut(double** x, int n) {
             if (disjointed_set[j] == t)
                 disjointed_set[j] = s;
 
+        remaining.remove(t);
+
         nn--;
-        double** xxx = new double*[nn];
-        for (int i = 0; i < nn; i++) {
-            xxx[i] = new double[nn];
-            for (int j = i; j < nn; j++) {
-                if (i != s && i != t && j != s && j != t)
-                    xxx[i][j] = xx[i][j];
+        double** xxx = new double*[n];
+        for (int i = 0; i < n; i++) {
+            xxx[i] = new double[n];
+            for (int j = i; j < n; j++) {
+                if (disjointed_set[i] != s) {
+                    if (disjointed_set[j] != s)
+                        xxx[i][j] = xx[i][j];
+                    else
+                        xxx[i][j] = (s<i ? xx[s][i] : xx[i][s]) + (t<i ? xx[t][i] : xx[i][t]);    
+                }
                 else {
                     xxx[i][j] = (s<j ? xx[s][j] : xx[j][s]) + (t<j ? xx[t][j] : xx[j][t]);
                 }
             }
         }
 
-        for (int i = 0; i < nn+1; i++) {
+        for (int i = 0; i < n; i++) {
             delete[] xx[i];
         }
         delete[] xx;
@@ -209,14 +237,14 @@ vector <vector<int> > MinCut(double** x, int n) {
     if (Ss.size() == 0)
         return Ss;
     
-    vector<bool> inSs(n, false);
-    for (size_t k = 0; k < Ss[0].size(); k++) {
-        inSs[Ss[0][k]] = true;
-    }
+    // vector<bool> inSs(n, false);
+    // for (size_t k = 0; k < Ss[0].size(); k++) {
+    //     inSs[Ss[0][k]] = true;
+    // }
 
-    for (int i = 0; i < n; i++)
-        if (!inSs[i])
-            Ss[1].push_back(i);
+    // for (int i = 0; i < n; i++)
+    //     if (!inSs[i])
+    //         Ss[1].push_back(i);
 
     return Ss;
 }
