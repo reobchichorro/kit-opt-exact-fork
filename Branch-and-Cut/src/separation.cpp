@@ -92,12 +92,12 @@ vector <vector<int> > MaxBack(double** x, int n) {
 // }
 
 vector <vector<int> > MinCut(double** x, int n) {
-    cerr << "mincut\n";
-    vector<vector<int>> Ss = vector<vector<int>>(1, vector<int>());
-    double mincut_val = MAXFLOAT;
+    // cerr << "mincut\n";
+    vector<vector<int>> Ss = vector<vector<int>>();
     vector<int> disjointed_set(n);
     double** xx = new double*[n];
     list<int> remaining;
+
 	for (int i = 0; i < n; i++) {
         disjointed_set[i] = i;
         remaining.push_back(i);
@@ -106,6 +106,16 @@ vector <vector<int> > MinCut(double** x, int n) {
             xx[i][j] = x[i][j];
         }
 	}
+
+    // for (int i = 0; i < n; i++) {
+    //     for (int j = i+1; j < n; j++) {
+    //         if (x[i][j] > 0.1)
+    //             cerr << i << "-(" << x[i][j] << ")-" << j << " ";
+    //         else if (x[i][j] > EPSILON)
+    //             cerr << "eps-" << i << "-(" << x[i][j] << ")-" << j << " ";
+    //     }
+    // }
+    // cerr << "\n";
 
     vector<double> degree(n,0);
 
@@ -120,11 +130,6 @@ vector <vector<int> > MinCut(double** x, int n) {
         Sk[s0] = true;
         insertion_order[0] = s0;
 
-        // for (int i = 0; i < nn; i++) {
-        //     maxback_val[i] = xx[0][i];
-        //     degree[i] = 0;
-        // }
-
         for (auto it = remaining.cbegin(); it != remaining.cend(); it++) {
             if (s0 < *it) {
                 maxback_val[*it] = xx[s0][*it];
@@ -135,13 +140,13 @@ vector <vector<int> > MinCut(double** x, int n) {
         }
 
         for (auto it = remaining.cbegin(); it != remaining.cend(); it++) {
-            for (auto itj = it; itj != remaining.cend(); itj++) {
+            for (auto itj = next(it,1); itj != remaining.cend(); itj++) {
                 degree[*it] += xx[*it][*itj];
                 degree[*itj] += xx[*it][*itj];
             }
         }
 
-        double cut_val = 0; // arrumar
+        double cut_val = 0;
         for (auto it = remaining.cbegin(); it != remaining.cend(); it++) {
             if (s0 < *it) {
                 cut_val += xx[s0][*it];
@@ -166,7 +171,8 @@ vector <vector<int> > MinCut(double** x, int n) {
             Sk[i] = true;
             insertion_order[kk] = i;
 
-            cut_val += degree[i] -2 * maxback_val[i];
+            if (kk < nn-1)
+                cut_val += degree[i] -2 * maxback_val[i];
             for (auto it = remaining.cbegin(); it != remaining.cend(); it++) {
                 if (Sk[*it])
                     continue;
@@ -177,13 +183,24 @@ vector <vector<int> > MinCut(double** x, int n) {
         int s = (*(insertion_order.rbegin()+1));
         int t = (*insertion_order.rbegin());
 
-        if (cut_val + EPSILON < mincut_val) {
-            mincut_val = cut_val;
-            Ss[0] = vector<int>();
+        if (cut_val + EPSILON < 2) {
+            size_t cut1 = Ss.size();
+            size_t cut2 = Ss.size() + 1;
+            Ss.push_back({});
+            Ss.push_back({});
             for (int j = 0; j < n; j++) {
                 if (disjointed_set[j] == t)
-                    Ss[0].push_back(j);
+                Ss[cut1].push_back(j);
+                else
+                Ss[cut2].push_back(j);
             }
+            cerr << cut_val << ":\t";
+            // for (size_t j=0; j<Ss[cut1].size(); j++)
+            //     cerr << Ss[cut1][j] << ",";
+            // cerr << "\n\t";
+            // for (size_t j=0; j<Ss[cut2].size(); j++)
+            //     cerr << Ss[cut2][j] << ",";
+            cerr << "\n";
         }
 
         if (t < s)
@@ -219,32 +236,18 @@ vector <vector<int> > MinCut(double** x, int n) {
 
         xx = xxx;
         xxx = NULL;
-
-        if (abs(mincut_val) < EPSILON) {
-            Ss = vector<vector<int>>();
-            break;
-        }
     }
-
-    // if (Ss[0].size() == 0 || Ss[0].size() == n)
-    //     Ss[0] = {0};
 
     for (int i = 0; i < nn; i++) {
 		delete[] xx[i];
 	}
 	delete[] xx;
 
-    if (Ss.size() == 0)
-        return Ss;
-    
-    // vector<bool> inSs(n, false);
-    // for (size_t k = 0; k < Ss[0].size(); k++) {
-    //     inSs[Ss[0][k]] = true;
+    // for (size_t i=0; i<Ss.size(); i++) {
+    //     for (size_t j=0; j<Ss[i].size(); j++)
+    //         cerr << Ss[i][j] << ",";
+    //     cerr << "\n";
     // }
-
-    // for (int i = 0; i < n; i++)
-    //     if (!inSs[i])
-    //         Ss[1].push_back(i);
 
     return Ss;
 }
