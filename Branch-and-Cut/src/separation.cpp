@@ -97,6 +97,7 @@ vector <vector<int> > MinCut(double** x, int n) {
     vector<int> disjointed_set(n);
     double** xx = new double*[n];
     list<int> remaining;
+    double mincut_val = 2 - 2*EPSILON;
 
 	for (int i = 0; i < n; i++) {
         disjointed_set[i] = i;
@@ -183,17 +184,34 @@ vector <vector<int> > MinCut(double** x, int n) {
         int s = (*(insertion_order.rbegin()+1));
         int t = (*insertion_order.rbegin());
 
-        if (cut_val + EPSILON < 2) {
-            size_t cut1 = Ss.size();
-            Ss.push_back({});
+        // if (cut_val + EPSILON < 2) {
+        //     size_t cut1 = Ss.size();
+        //     Ss.push_back({});
+        //     for (int j = 0; j < n; j++) {
+        //         if (disjointed_set[j] == t)
+        //             Ss[cut1].push_back(j);
+        //     }
+        //     cerr << cut_val << ":\t";
+        //     for (size_t j=0; j<Ss[cut1].size(); j++)
+        //         cerr << Ss[cut1][j] << ",";
+        //     cerr << "\n";
+        // }
+
+        if (cut_val + EPSILON < mincut_val) {
+            mincut_val = cut_val;
+            Ss = vector<vector<int>>();
+            Ss.push_back(vector<int>());
             for (int j = 0; j < n; j++) {
                 if (disjointed_set[j] == t)
-                    Ss[cut1].push_back(j);
+                    Ss.back().push_back(j);
             }
-            cerr << cut_val << ":\t";
-            for (size_t j=0; j<Ss[cut1].size(); j++)
-                cerr << Ss[cut1][j] << ",";
-            cerr << "\n";
+        }
+        else if (abs(cut_val - mincut_val) < EPSILON) {
+            Ss.push_back(vector<int>());
+            for (int j = 0; j < n; j++) {
+                if (disjointed_set[j] == t)
+                    Ss.back().push_back(j);
+            }
         }
 
         if (t < s)
@@ -245,6 +263,7 @@ vector <vector<int> > MinCut(double** x, int n) {
             }
         }
         bool first = true;
+        // cerr << "\t";
         for (int i = 0; i < n; i++) {
             if (!inSs[i]) {
                 if (first) {
@@ -252,10 +271,16 @@ vector <vector<int> > MinCut(double** x, int n) {
                     Ss.push_back(vector<int>());
                 }
                 Ss.back().push_back(i);
-                cerr << "\t" << i << ",";
+                // cerr << i << ",";
             }
-            cerr << "\n";
         }
+        // cerr << "\n";
+    }
+
+    for (size_t i=0; i<Ss.size(); i++) {
+        for (size_t j=0; j<Ss[i].size(); j++)
+            cerr << Ss[i][j] << ",";
+        cerr << "\n";
     }
 
     return Ss;
