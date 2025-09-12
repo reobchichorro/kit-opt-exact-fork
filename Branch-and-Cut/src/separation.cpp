@@ -101,25 +101,26 @@ vector <vector<int> > MaxBack(double** x, int n) {
 vector <vector<int> > MinCut(double** x, int n) {
     cerr << "mincut\n";
     vector<vector<int>> Ss;
-    // vector<bool> found = vector<bool>(n,false); // Which vertices are in one of Ss' vectors
+    vector<bool> found = vector<bool>(n,false); // Which vertices are in one of Ss' vectors
 
     vector<double> degree(n,0);
 
-    // for (int i = 0; i < n; i++) {
-    //     for (int j = i; j < n; j++) {
-    //         if (x[i][j] > 0.1)
-    //             cerr << i << "-(" << x[i][j] << ")-" << j << " ";
-    //         else if (x[i][j] > EPSILON)
-    //             cerr << "eps-" << i << "-(" << x[i][j] << ")-" << j << " ";
-    //     }
-    // }
-    // cerr << "\n";
+    for (int i = 0; i < n; i++) {
+        for (int j = i+1; j < n; j++) {
+            if (x[i][j] > 0.01)
+                cerr << i << "-(" << x[i][j] << ")-" << j << " ";
+            else if (x[i][j] > EPSILON)
+                cerr << "eps-" << i << "-(" << x[i][j] << ")-" << j << " ";
+        }
+    }
+    cerr << "\n";
 
-   for (int s0 = 0; s0 < 1; s0++) {// TODO how to get multiple subtours (3+)
-        // if (found[s0])
-        //     continue;
+   for (int s0 = 0; s0 < n; s0++) {// TODO how to get multiple subtours (3+)
+        if (found[s0])
+            continue;
 
         double mincut_val = 2 - 2 * EPSILON;
+        vector<bool> selected(n, false);
 
         vector<int> disjointed_set(n);
         double** xx = new double*[n];
@@ -205,18 +206,22 @@ vector <vector<int> > MinCut(double** x, int n) {
 
             if (cut_val + EPSILON < mincut_val) {
                 mincut_val = cut_val;
-                Ss = vector<vector<int>>();
-                Ss.push_back(vector<int>());
+                // Ss = vector<vector<int>>();
+                // Ss.push_back(vector<int>());
                 for (int j = 0; j < n; j++) {
                     if (disjointed_set[j] == t)
-                        Ss.back().push_back(j);
+                        selected[j] = true;
+                        // Ss.back().push_back(j);
                 }
             }
             else if (abs(cut_val - mincut_val) < EPSILON) {
-                Ss.push_back(vector<int>());
+                // Ss.push_back(vector<int>());
                 for (int j = 0; j < n; j++) {
                     if (disjointed_set[j] == t)
-                        Ss.back().push_back(j);
+                        selected[j] = true;
+                        // Ss.back().push_back(j);
+                    else
+                        selected[j] = false;
                 }
             }
 
@@ -260,26 +265,33 @@ vector <vector<int> > MinCut(double** x, int n) {
             // }
         }
 
-        vector<bool> inSs(n, false);
-        for (size_t i = 0; i < Ss.size(); i++) {
-            for (auto it = Ss[i].cbegin(); it != Ss[i].cend(); it++) {
-                inSs[*it] = true;
+        Ss.push_back({});
+        for (int i = 0; i < n; i++) {
+            if (!selected[i]) {
+                Ss.back().push_back(i);
+                found[i] = true;
             }
         }
+        // vector<bool> inSs(n, false);
+        // for (size_t i = 0; i < Ss.size(); i++) {
+        //     for (auto it = Ss[i].cbegin(); it != Ss[i].cend(); it++) {
+        //         inSs[*it] = true;
+        //     }
+        // }
 
-        if (Ss.size() > 0) {
-            bool first = true;
-            for (int i = 0; i < n; i++) {
-                // found[i] = found[i] || !inSs[i];
-                if (!inSs[i]) {
-                    if (first) {
-                        first = false;
-                        Ss.push_back(vector<int>());
-                    }
-                    Ss.back().push_back(i);
-                }
-            }
-        }
+        // if (Ss.size() > 0) {
+        //     bool first = true;
+        //     for (int i = 0; i < n; i++) {
+        //         // found[i] = found[i] || !inSs[i];
+        //         if (!inSs[i]) {
+        //             if (first) {
+        //                 first = false;
+        //                 Ss.push_back(vector<int>());
+        //             }
+        //             Ss.back().push_back(i);
+        //         }
+        //     }
+        // }
 
         for (int i = 0; i < nn; i++) {
             delete[] xx[i];
@@ -297,7 +309,7 @@ vector <vector<int> > MinCut(double** x, int n) {
     cerr << Ss.size() << " size\n";
     // if (Ss.size() == 0) {
         for (int i = 0; i < n; i++) {
-            for (int j = i; j < n; j++) {
+            for (int j = i+1; j < n; j++) {
                 if (x[i][j] > 0.1)
                     cerr << i << "-(" << x[i][j] << ")-" << j << " ";
                 else if (x[i][j] > EPSILON)
