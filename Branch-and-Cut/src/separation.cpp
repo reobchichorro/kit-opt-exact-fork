@@ -185,21 +185,14 @@ vector <vector<int> > MinCut(double** x, int n) {
 
         if (cut_val + EPSILON < 2) {
             size_t cut1 = Ss.size();
-            size_t cut2 = Ss.size() + 1;
-            Ss.push_back({});
             Ss.push_back({});
             for (int j = 0; j < n; j++) {
                 if (disjointed_set[j] == t)
-                Ss[cut1].push_back(j);
-                else
-                Ss[cut2].push_back(j);
+                    Ss[cut1].push_back(j);
             }
             cerr << cut_val << ":\t";
-            // for (size_t j=0; j<Ss[cut1].size(); j++)
-            //     cerr << Ss[cut1][j] << ",";
-            // cerr << "\n\t";
-            // for (size_t j=0; j<Ss[cut2].size(); j++)
-            //     cerr << Ss[cut2][j] << ",";
+            for (size_t j=0; j<Ss[cut1].size(); j++)
+                cerr << Ss[cut1][j] << ",";
             cerr << "\n";
         }
 
@@ -243,11 +236,27 @@ vector <vector<int> > MinCut(double** x, int n) {
 	}
 	delete[] xx;
 
-    // for (size_t i=0; i<Ss.size(); i++) {
-    //     for (size_t j=0; j<Ss[i].size(); j++)
-    //         cerr << Ss[i][j] << ",";
-    //     cerr << "\n";
-    // }
+    
+    if (Ss.size() > 0) {
+        vector<bool> inSs(n, false);
+        for (size_t i = 0; i < Ss.size(); i++) {
+            for (auto it = Ss[i].cbegin(); it != Ss[i].cend(); it++) {
+                inSs[*it] = true;
+            }
+        }
+        bool first = true;
+        for (int i = 0; i < n; i++) {
+            if (!inSs[i]) {
+                if (first) {
+                    first = false;
+                    Ss.push_back(vector<int>());
+                }
+                Ss.back().push_back(i);
+                cerr << "\t" << i << ",";
+            }
+            cerr << "\n";
+        }
+    }
 
     return Ss;
 }
