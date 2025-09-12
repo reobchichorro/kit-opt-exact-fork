@@ -1,7 +1,7 @@
 #include "separation.h"
 
 vector <vector<int> > MaxBack(double** x, int n) {
-    cerr << "Maxback\n";
+    // cerr << "Maxback\n";
     // kit's MaxBack finds one subtour. The method here needs to return ALL subtours
     vector<vector<int>> Ss; // TODO find better name
     vector<bool> found = vector<bool>(n,false); // Which vertices are in one of Ss' vectors
@@ -85,11 +85,11 @@ vector <vector<int> > MaxBack(double** x, int n) {
     if (Ss.size() == 1 && Ss[0].size() == n)
         Ss = vector<vector<int>>();
 
-    for (size_t i=0; i<Ss.size(); i++) {
-        for (size_t j=0; j<Ss[i].size(); j++)
-            cerr << Ss[i][j] << ",";
-        cerr << "\n";
-    }
+    // for (size_t i=0; i<Ss.size(); i++) {
+    //     for (size_t j=0; j<Ss[i].size(); j++)
+    //         cerr << Ss[i][j] << ",";
+    //     cerr << "\n";
+    // }
         
     return Ss;
 }
@@ -101,25 +101,25 @@ vector <vector<int> > MaxBack(double** x, int n) {
 vector <vector<int> > MinCut(double** x, int n) {
     cerr << "mincut\n";
     vector<vector<int>> Ss;
-    vector<bool> found = vector<bool>(n,false); // Which vertices are in one of Ss' vectors
+    // vector<bool> found = vector<bool>(n,false); // Which vertices are in one of Ss' vectors
 
     vector<double> degree(n,0);
 
-    for (int i = 0; i < n; i++) {
-        for (int j = i + 1; j < n; j++) {
-            if (x[i][j] > 0.1)
-                cerr << i << "-" << j << "," << x[i][j] << " ";
-            else if (x[i][j] > EPSILON)
-                cerr << "eps-" << i << "-" << j << "," << x[i][j] << " ";
-        }
-    }
-    cerr << "\n";
+    // for (int i = 0; i < n; i++) {
+    //     for (int j = i; j < n; j++) {
+    //         if (x[i][j] > 0.1)
+    //             cerr << i << "-(" << x[i][j] << ")-" << j << " ";
+    //         else if (x[i][j] > EPSILON)
+    //             cerr << "eps-" << i << "-(" << x[i][j] << ")-" << j << " ";
+    //     }
+    // }
+    // cerr << "\n";
 
-   for (int s0 = 0; s0 < n; s0++) {
-        if (found[s0])
-            continue;
+   for (int s0 = 0; s0 < 1; s0++) {// TODO how to get multiple subtours (3+)
+        // if (found[s0])
+        //     continue;
 
-        double mincut_val = MAXFLOAT;
+        double mincut_val = 2 - 2 * EPSILON;
 
         vector<int> disjointed_set(n);
         double** xx = new double*[n];
@@ -134,7 +134,7 @@ vector <vector<int> > MinCut(double** x, int n) {
         }
 
         int nn = n;
-        Ss.push_back({s0});
+        // Ss.push_back({s0});
 
         for (int k = 1; k < n; k++) {
             //Below: cut_val, s, t = MaxBackStep();
@@ -159,7 +159,7 @@ vector <vector<int> > MinCut(double** x, int n) {
             }
 
             for (auto it = remaining.cbegin(); it != remaining.cend(); it++) {
-                for (auto itj = it; itj != remaining.cend(); itj++) {
+                for (auto itj = next(it,1); itj != remaining.cend(); itj++) {
                     degree[*it] += xx[*it][*itj];
                     degree[*itj] += xx[*it][*itj];
                 }
@@ -187,10 +187,12 @@ vector <vector<int> > MinCut(double** x, int n) {
                         first = false;
                     }
                 }
+                // cerr << degree[i] << " " << maxback_val[i] << "\n";
                 Sk[i] = true;
                 insertion_order[kk] = i;
 
-                cut_val += degree[i] -2 * maxback_val[i];
+                if (kk < nn-1)
+                    cut_val += degree[i] -2 * maxback_val[i];
                 for (auto it = remaining.cbegin(); it != remaining.cend(); it++) {
                     if (Sk[*it])
                         continue;
@@ -203,7 +205,15 @@ vector <vector<int> > MinCut(double** x, int n) {
 
             if (cut_val + EPSILON < mincut_val) {
                 mincut_val = cut_val;
-                Ss.back() = vector<int>();
+                Ss = vector<vector<int>>();
+                Ss.push_back(vector<int>());
+                for (int j = 0; j < n; j++) {
+                    if (disjointed_set[j] == t)
+                        Ss.back().push_back(j);
+                }
+            }
+            else if (abs(cut_val - mincut_val) < EPSILON) {
+                Ss.push_back(vector<int>());
                 for (int j = 0; j < n; j++) {
                     if (disjointed_set[j] == t)
                         Ss.back().push_back(j);
@@ -244,28 +254,38 @@ vector <vector<int> > MinCut(double** x, int n) {
             xx = xxx;
             xxx = NULL;
 
-            if (abs(mincut_val) < EPSILON) {
-                Ss = vector<vector<int>>();
-                break;
-            }
+            // if (abs(mincut_val) < EPSILON) {
+            //     Ss = vector<vector<int>>();
+            //     break;
+            // }
         }
 
         vector<bool> inSs(n, false);
-        for (auto it = Ss.back().cbegin(); it != Ss.back().cend(); it++) {
-            inSs[*it] = true;
+        for (size_t i = 0; i < Ss.size(); i++) {
+            for (auto it = Ss[i].cbegin(); it != Ss[i].cend(); it++) {
+                inSs[*it] = true;
+            }
         }
 
-        Ss.back() = vector<int>();
-        for (int i = 0; i < n; i++) {
-            found[i] = found[i] || !inSs[i];
-            if (!inSs[i])
-                Ss.back().push_back(i);
+        if (Ss.size() > 0) {
+            bool first = true;
+            for (int i = 0; i < n; i++) {
+                // found[i] = found[i] || !inSs[i];
+                if (!inSs[i]) {
+                    if (first) {
+                        first = false;
+                        Ss.push_back(vector<int>());
+                    }
+                    Ss.back().push_back(i);
+                }
+            }
         }
 
         for (int i = 0; i < nn; i++) {
             delete[] xx[i];
         }
         delete[] xx;
+        cerr << mincut_val << " mincut_val\n";
     }
     
     // if (Ss[0].size() == 0 || Ss[0].size() == n)
@@ -273,6 +293,19 @@ vector <vector<int> > MinCut(double** x, int n) {
 
     if (Ss.size() == 1 && Ss[0].size() == n)
         Ss = vector<vector<int>>();
+
+    cerr << Ss.size() << " size\n";
+    // if (Ss.size() == 0) {
+        for (int i = 0; i < n; i++) {
+            for (int j = i; j < n; j++) {
+                if (x[i][j] > 0.1)
+                    cerr << i << "-(" << x[i][j] << ")-" << j << " ";
+                else if (x[i][j] > EPSILON)
+                    cerr << "eps-" << i << "-(" << x[i][j] << ")-" << j << " ";
+            }
+        }
+        cerr << "\n";
+    // }
 
     for (size_t i=0; i<Ss.size(); i++) {
         for (size_t j=0; j<Ss[i].size(); j++)
