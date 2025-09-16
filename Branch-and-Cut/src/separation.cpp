@@ -1,8 +1,7 @@
 #include "separation.h"
 
-vector <vector<int> > MaxBack(double** x, int n) {
+void MaxBack(double** x, int n, vector <vector<int> >& Ss) {
     // kit's MaxBack finds one subtour. The method here needs to return ALL subtours
-    vector<vector<int>> Ss; // TODO find better name
     vector<bool> found = vector<bool>(n,false); // Which vertices are in one of Ss' vectors
 
     // To be reset at each iteration
@@ -83,17 +82,19 @@ vector <vector<int> > MaxBack(double** x, int n) {
     }
     if (Ss.size() == 1 && Ss[0].size() == n)
         Ss = vector<vector<int>>();
+
+    // for (size_t i=0; i<Ss.size(); i++) {
+    //     for (size_t j=0; j<Ss[i].size(); j++)
+    //         cerr << Ss[i][j] << ",";
+    //     cerr << "\n";
+    // }
         
-    return Ss;
+    return;
 }
 
-// void MinCutStep(double** x, int n, vector<int>& S, int s0) {
-    
-// }
-
-vector <vector<int> > MinCut(double** x, int n) {
+void MinCut(double** x, int n, vector <vector<int> >& Ss) {
     // cerr << "mincut\n";
-    vector<vector<int>> Ss = vector<vector<int>>();
+    // vector<vector<int>> Ss = vector<vector<int>>();
     vector<int> disjointed_set(n);
     double** xx = new double*[n];
     list<int> remaining;
@@ -228,28 +229,33 @@ vector <vector<int> > MinCut(double** x, int n) {
         for (int i = 0; i < n; i++) {
             xxx[i] = new double[n];
             for (int j = i; j < n; j++) {
+                xxx[i][j] = xx[i][j];
+            }
+        }
+
+        for (int i = 0; i < n; i++) {
+            for (int j = i; j < n; j++) {
                 if (disjointed_set[i] != s) {
                     if (disjointed_set[j] != s)
-                        xxx[i][j] = xx[i][j];
+                        xx[i][j] = xxx[i][j];
                     else
-                        xxx[i][j] = (s<i ? xx[s][i] : xx[i][s]) + (t<i ? xx[t][i] : xx[i][t]);    
+                        xx[i][j] = (s<i ? xxx[s][i] : xxx[i][s]) + (t<i ? xxx[t][i] : xxx[i][t]);    
                 }
                 else {
-                    xxx[i][j] = (s<j ? xx[s][j] : xx[j][s]) + (t<j ? xx[t][j] : xx[j][t]);
+                    xx[i][j] = (s<j ? xxx[s][j] : xxx[j][s]) + (t<j ? xxx[t][j] : xxx[j][t]);
                 }
             }
         }
 
         for (int i = 0; i < n; i++) {
-            delete[] xx[i];
+            delete[] xxx[i];
         }
-        delete[] xx;
+        delete[] xxx;
 
-        xx = xxx;
-        xxx = NULL;
+        // swap(xx, xxx);
     }
 
-    for (int i = 0; i < nn; i++) {
+    for (int i = 0; i < n; i++) {
 		delete[] xx[i];
 	}
 	delete[] xx;
@@ -277,11 +283,11 @@ vector <vector<int> > MinCut(double** x, int n) {
         // cerr << "\n";
     }
 
-    for (size_t i=0; i<Ss.size(); i++) {
-        for (size_t j=0; j<Ss[i].size(); j++)
-            cerr << Ss[i][j] << ",";
-        cerr << "\n";
-    }
+    // for (size_t i=0; i<Ss.size(); i++) {
+    //     for (size_t j=0; j<Ss[i].size(); j++)
+    //         cerr << Ss[i][j] << ",";
+    //     cerr << "\n";
+    // }
 
-    return Ss;
+    return;
 }

@@ -23,14 +23,14 @@
 
 using namespace std;
 
-typedef struct{
-    vector<int> nodes;
-    int id;
-    bool is_vertexA;
-} vertex_type;
+// typedef struct{
+//     vector<int> nodes;
+//     int id;
+//     bool is_vertexA;
+// } vertex_type;
 
-extern vector <vector<int> > MaxBack(double** x, int n);
-extern vector <vector<int> > MinCut(double** x, int n);
+void MaxBack(double** x, int n, vector <vector<int> >& Ss);
+void MinCut(double** x, int n, vector <vector<int> >& Ss);
 
 #endif
 

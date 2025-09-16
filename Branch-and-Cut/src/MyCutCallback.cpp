@@ -60,10 +60,10 @@ void MyCutCallback::main()
 		}
 	}
 	
-	cutSetPool = MaxBack(x_edge, n);
+	MaxBack(x_edge, n, cutSetPool);
 	
 	if (cutSetPool.empty() && depth <= 7) {
-		cutSetPool = MinCut(x_edge, n);
+		MinCut(x_edge, n, cutSetPool);
 	}
 
 	/***************** Creating the constraints ***************/
