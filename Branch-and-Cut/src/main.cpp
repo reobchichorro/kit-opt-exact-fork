@@ -193,6 +193,7 @@ void STSP_Solve(Data *data, string instanceName, double ub)
     STSP.setParam(IloCplex::Threads, 1);
     STSP.setParam(IloCplex::Param::MIP::Tolerances::MIPGap, 1e-08);
     STSP.setParam(IloCplex::CutUp, ub);
+	// STSP.setParam(IloCplex::Param::MIP::Strategy::VariableSelect, CPX_VARSEL_STRONG);
     //STSP.exportModel("stsp.lp");
 
     double timeBefore, timeAfter;
