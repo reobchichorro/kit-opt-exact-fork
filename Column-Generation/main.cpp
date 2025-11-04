@@ -9,9 +9,20 @@ using namespace std;
 
 #define EPS 1e-6
 
-size_t AllInt(const IloCplex& rmp, const IloNumVarArray& lambda, const vector<vector<bool>>& columns, const int n, vector<vector<double>>& pairs) {
-	size_t most_frac = 0;
+bool AllInt(const IloCplex& rmp, const IloNumVarArray& lambda, const vector<vector<bool>>& columns, const int n, vector<vector<double>>& pairs, size_t& fraci, size_t& fracj) {
+	bool all_int = true;
 	vector<double> values(n, 0);
+
+	for (size_t k = 0; k < lambda.getSize(); k++)
+	{
+		if (rmp.getValue(lambda[k]) > EPS && abs(1 - rmp.getValue(lambda[k])) > EPS) {
+			all_int = false;
+			break;
+		}
+	}
+
+	if (all_int)
+		return all_int;
 
 	for (size_t i = 0; i < n; i++) {
 		for (size_t j = i+1; j < n; j++) {
@@ -25,20 +36,20 @@ size_t AllInt(const IloCplex& rmp, const IloNumVarArray& lambda, const vector<ve
 		}
 	}
 
-	double frac = 0;
+	double frac = 2;
 
 	for (size_t i = 0; i < n; i++) {
 		for (size_t j = i+1; j < n; j++) {
 			// cout << pairs[i][j] << " ";
 			if (abs(0.5 - pairs[i][j]) + EPS < abs(0.5 - frac)) {
-				most_frac = n*i + j;
+				fraci = i; fracj = j;
 				frac = pairs[i][j];
 			}
 		}
 		// cout << "\n";
 	}
 
-	return most_frac;
+	return all_int;
 }
 
 struct Node {
@@ -59,10 +70,10 @@ int main()
 	int capacity = 7;
 	bool use_mip = true;
 
-	// cin >> n >> capacity;
-	// weight = vector<int>(n);
-	// for (int i=0; i < n; i++)
-	// cin >> weight[i];
+	cin >> n >> capacity;
+	weight = vector<int>(n);
+	for (int i=0; i < n; i++)
+	cin >> weight[i];
 
 	long long int UB = 9999999;
 
@@ -260,8 +271,8 @@ int main()
 
 
 	// itens 1 and 2 are together only on columns 5 and 11
-	lambda[11].setUB(0.0);
-	lambda[5].setUB(0.0);
+	// lambda[11].setUB(0.0);
+	// lambda[5].setUB(0.0);
 
 	// to allow them again:
 	// lambda[5].setUB(IloInfinity);
@@ -270,13 +281,13 @@ int main()
 	rmp.solve();
 
 	vector<vector<double>> pairs(n, vector<double>(n,0));
-	size_t most_frac = AllInt(rmp, lambda, columns, n, pairs);
-	size_t fraci = most_frac/n, fracj = most_frac%n;
+	size_t fraci, fracj;
+	bool all_int = AllInt(rmp, lambda, columns, n, pairs, fraci, fracj);
 	cout << fraci << "," << fracj << endl;
 
 	list<Node> tree;
 
-	if (most_frac) {
+	if (!all_int) {
 		Node n1;
 		n1.used_columns = unordered_set<size_t>();
 		n1.pairs = vector<pair<pair<size_t, size_t>, bool>>();
@@ -299,10 +310,15 @@ int main()
 	}
 
 	while (!tree.empty()) {
+		cout << "\n\nNew node\n";
 		Node nd = tree.back();
 		tree.pop_back();
 		if (ceil(nd.LB) >= UB)
 			continue;
+
+		// for (auto it = nd.used_columns.cbegin(); it != nd.used_columns.cend(); it++)
+		// 	cout << *it << " ";
+		// cout << "\n";
 
 		bool left_right = nd.pairs.back().second;
 		for (size_t l = 0; l < lambda.getSize(); l++) {
@@ -357,6 +373,15 @@ int main()
 			capacity_constraint.add(pricing_weight <= capacity);
 	
 			pricing_model.add(capacity_constraint);
+
+			for (auto pair = nd.pairs.cbegin(); pair != nd.pairs.cend(); pair++) {
+				if(pair->second) {
+					pricing_model.add(x[pair->first.first] == x[pair->first.second]);
+				}
+				else {
+					pricing_model.add(x[pair->first.first] + x[pair->first.second] <= 1);
+				}
+			}
 	
 			IloObjective pricing_objective = IloMinimize(env, pricing_obj);
 			pricing_model.add(pricing_objective);
@@ -367,7 +392,7 @@ int main()
 	
 			pricing_obj_val = pricing_problem.getObjValue();
 			
-			// cout << "Reduced cost is equal to " << pricing_obj_val << endl;
+			cout << "Reduced cost is equal to " << pricing_obj_val << endl;
 			if (pricing_obj_val < -1e-5)
 			{
 				IloNumArray entering_col(env, n);
@@ -415,13 +440,12 @@ int main()
 			}
 		}
 
-		most_frac = AllInt(rmp, lambda, columns, n, pairs);
-		fraci = most_frac/n; fracj = most_frac%n;
+		all_int = AllInt(rmp, lambda, columns, n, pairs, fraci, fracj);
 		cout << fraci << "," << fracj << endl;
 
 		list<Node> tree;
 
-		if (most_frac) {
+		if (!all_int) {
 			Node n1;
 			n1.used_columns = nd.used_columns;
 			n1.pairs.push_back({{fraci, fracj}, false});
