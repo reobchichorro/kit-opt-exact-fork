@@ -310,9 +310,14 @@ int main()
 	}
 
 	while (!tree.empty()) {
-		cout << "\n\nNew node\n";
+		cout << "\n\nNew node: ";
 		Node nd = tree.back();
 		tree.pop_back();
+		for (auto pair = nd.pairs.cbegin(); pair != nd.pairs.cend(); pair++) {
+			cout << pair->second;
+		}
+		cout << "\n";
+
 		if (ceil(nd.LB) >= UB)
 			continue;
 
@@ -392,7 +397,7 @@ int main()
 	
 			pricing_obj_val = pricing_problem.getObjValue();
 			
-			cout << "Reduced cost is equal to " << pricing_obj_val << endl;
+			cout << "Reduced cost is equal to " << pricing_obj_val << "\n";
 			if (pricing_obj_val < -1e-5)
 			{
 				IloNumArray entering_col(env, n);
@@ -402,7 +407,7 @@ int main()
 				columns.push_back(vector<bool>(n, 0));
 
 				nd.used_columns.insert(columns.size() - 1);
-				cout << "Entering column:" << endl;
+				cout << "Entering column:\n";
 				for (size_t i = 0; i < n; i++)
 				{
 					cout << (entering_col[i] < 0.5 ? 0 : 1) << " ";
@@ -441,19 +446,19 @@ int main()
 		}
 
 		all_int = AllInt(rmp, lambda, columns, n, pairs, fraci, fracj);
-		cout << fraci << "," << fracj << endl;
-
-		list<Node> tree;
+		cout << fraci << "," << fracj << "\n";
 
 		if (!all_int) {
 			Node n1;
 			n1.used_columns = nd.used_columns;
+			n1.pairs = nd.pairs;
 			n1.pairs.push_back({{fraci, fracj}, false});
 			n1.LB = rmp.getObjValue();
 			tree.push_back(n1);
 
 			Node n2;
 			n2.used_columns = nd.used_columns;
+			n2.pairs = nd.pairs;
 			n2.pairs.push_back({{fraci, fracj}, true});
 			n2.LB = rmp.getObjValue();
 			tree.push_back(n2);
