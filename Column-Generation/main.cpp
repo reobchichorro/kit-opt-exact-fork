@@ -278,6 +278,15 @@ int main()
 	// lambda[5].setUB(IloInfinity);
 	// lambda[11].setUB(IloInfinity);
 
+	IloExpr new_sum_obj(env);
+	for (int i = 0; i < n; i++)
+	{
+		new_sum_obj += lambda[i];
+	}
+	IloObjective new_master_objective = IloMinimize(env, new_sum_obj); 
+	master_model.remove(master_objective);
+	master_model.add(new_master_objective);
+
 	rmp.solve();
 
 	vector<vector<double>> pairs(n, vector<double>(n,0));
@@ -350,9 +359,9 @@ int main()
 			IloNumArray pi(env, n);
 			rmp.getDuals(pi, partition_constraint);
 			
-			// for (size_t i = 0; i < n; i++)
+			// for (size_t i = 0; i < n && nd.pairs.size() == 1; i++)
 			// {
-			// 	cout << "Dual variable of constraint " << i << " = " << pi[i] << endl;
+			// 	cout << "Dual variable of constraint " << i << " = " << pi[i] << "\n";
 			// }
 			
 			// Build and solve the pricing problem
