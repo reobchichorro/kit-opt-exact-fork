@@ -2,24 +2,80 @@
 #include "combo.c"
 #include <vector>
 #include <cstdlib>
+#include <list>
+#include <unordered_set>
 
 using namespace std;
+
+#define EPS 1e-6
+
+size_t AllInt(const IloCplex& rmp, const IloNumVarArray& lambda, const vector<vector<bool>>& columns, const int n, vector<vector<double>>& pairs) {
+	size_t most_frac = 0;
+	vector<double> values(n, 0);
+
+	for (size_t i = 0; i < n; i++) {
+		for (size_t j = i+1; j < n; j++) {
+			pairs[i][j] = 0;
+			for (size_t k = 0; k < lambda.getSize(); k++)
+			{
+				if (columns[k][i] && columns[k][j]) {
+					pairs[i][j] += rmp.getValue(lambda[k]);
+				}
+			}
+		}
+	}
+
+	double frac = 0;
+
+	for (size_t i = 0; i < n; i++) {
+		for (size_t j = i+1; j < n; j++) {
+			// cout << pairs[i][j] << " ";
+			if (abs(0.5 - pairs[i][j]) + EPS < abs(0.5 - frac)) {
+				most_frac = n*i + j;
+				frac = pairs[i][j];
+			}
+		}
+		// cout << "\n";
+	}
+
+	return most_frac;
+}
+
+struct Node {
+	unordered_set<size_t> used_columns;
+	vector<pair<pair<size_t, size_t>, bool>> pairs;
+	double LB;
+};
+
+void solveMIP() {
+
+}
 
 int main() 
 {
 	const double M = 1e6;
+	int n = 5;
 	vector<int> weight = {2, 1, 3, 3, 5};
 	int capacity = 7;
-	int n = weight.size();
-	bool combomip = false;
+	bool use_mip = true;
 
-	item* items = new item[weight.size()];
+	// cin >> n >> capacity;
+	// weight = vector<int>(n);
+	// for (int i=0; i < n; i++)
+	// cin >> weight[i];
+
+	long long int UB = 9999999;
+
+	vector<vector<bool>> columns(n, vector<bool>(n,0));
+
+	item* items = new item[n];
 	for (int i = 0; i < n; i++)
 	{
 		items[i].w = weight[i];
 		items[i].profitofitem = M;
 		items[i].x = 0;
 		items[i].index = i;
+		columns[i][i] = 1;
 	}
 
 	IloEnv env;
@@ -82,7 +138,7 @@ int main()
 		IloExpr pricing_weight(env);
 		IloRangeArray capacity_constraint(env);
 		IloCplex pricing_problem;
-		if (combomip) {
+		if (use_mip) {
 			pricing_obj += 1;
 			for (int i = 0; i < n; i++)
 			{
@@ -126,11 +182,9 @@ int main()
 
 			IloNumArray entering_col(env, n);
 
-			if (combomip)
+			if (use_mip)
 				pricing_problem.getValues(x, entering_col);
-
-			cout << endl << "Entering column:" << endl;
-			if (!combomip) {
+			else {
 				for (size_t i = 0; i < n; i++)
 				{
 					if (items[i].x) {
@@ -140,9 +194,13 @@ int main()
 						entering_col[items[i].index] = 0;
 				}
 			}
+
+			columns.push_back(vector<bool>(n, 0));
+			cout << endl << "Entering column:" << endl;
 			for (size_t i = 0; i < n; i++)
 			{
-				cout << (entering_col[i] < 0.5 ? 0 : 1) << endl;
+				cout << (entering_col[i] < 0.5 ? 0 : 1) << " ";
+				columns.back()[i] = (entering_col[i] < 0.5 ? 0 : 1);
 			}
 			cout << endl;
 
@@ -169,20 +227,27 @@ int main()
 			}
 			cout << endl;
 
-			lambda_counter++;
-
 		}
 		else
 		{
 			// cout << "No column with negative reduced costs found. The current basis is optimal" << endl;
-			cout << "Final master problem: " << endl;
-			system("cat model.lp");
+			// cout << "Final master problem: " << endl;
+			// system("cat model.lp");
 			break;
 		}
 	}
 
+	// Combo solution
+	// 1 0 0 0 0 1 1 1 0  1  0
+	// 0 1 0 0 0 1 1 0 0  0  1
+	// 0 0 1 0 0 0 1 0 1  0  0
+	// 0 0 0 1 0 1 0 1 1  0  0
+	// 0 0 0 0 1 0 0 0 0  1  1
+	//           v v e v  v  v
+	// e - coluna foi repetida
+
 	cout << endl;
-	cout << "Forcing items 1 and 2 to be separated in the master (for branch-and-price only): " << endl;
+	// cout << "Forcing items 1 and 2 to be separated in the master (for branch-and-price only): " << endl;
 	// 0 1 2 3 4 5 6 7 8 9 10 11
 	//                           
 	// 1 0 0 0 0 1 1 1 0 1  0  0
@@ -190,7 +255,8 @@ int main()
 	// 0 0 1 0 0 1 0 1 1 0  0  1
 	// 0 0 0 1 0 0 1 0 1 0  0  1
 	// 0 0 0 0 1 0 0 0 0 1  1  0
-	//           v v v f v  f  f
+	//           v v v v v  v  f
+	// 0 0 0 0 0 0 0.333333 0.333333 0.666667 0.333333 0.666667 0 
 
 
 	// itens 1 and 2 are together only on columns 5 and 11
@@ -203,20 +269,200 @@ int main()
 
 	rmp.solve();
 
-	for (size_t j = 0; j < lambda.getSize(); j++)
-	{
-		cout << rmp.getValue(lambda[j]) << " ";
+	vector<vector<double>> pairs(n, vector<double>(n,0));
+	size_t most_frac = AllInt(rmp, lambda, columns, n, pairs);
+	size_t fraci = most_frac/n, fracj = most_frac%n;
+	cout << fraci << "," << fracj << endl;
+
+	list<Node> tree;
+
+	if (most_frac) {
+		Node n1;
+		n1.used_columns = unordered_set<size_t>();
+		n1.pairs = vector<pair<pair<size_t, size_t>, bool>>();
+		n1.pairs.push_back({{fraci, fracj}, false});
+		n1.LB = rmp.getObjValue();
+		
+		Node n2;
+		n2.used_columns = unordered_set<size_t>();
+		n2.pairs = vector<pair<pair<size_t, size_t>, bool>>();
+		n2.pairs.push_back({{fraci, fracj}, true});
+		n2.LB = rmp.getObjValue();
+		
+		for (size_t col = 0; col < columns.size(); col++) {
+			n1.used_columns.insert(col);
+			n2.used_columns.insert(col);
+		}
+
+		tree.push_back(n1);
+		tree.push_back(n2);
 	}
-	cout << endl;
+
+	while (!tree.empty()) {
+		Node nd = tree.back();
+		tree.pop_back();
+		if (ceil(nd.LB) >= UB)
+			continue;
+
+		bool left_right = nd.pairs.back().second;
+		for (size_t l = 0; l < lambda.getSize(); l++) {
+			lambda[l].setUB(IloInfinity);
+
+
+			if (left_right && (columns[l][fraci] != columns[l][fracj]))
+				nd.used_columns.erase(l);
+			else if (!left_right && columns[l][fraci] && columns[l][fracj])
+				nd.used_columns.erase(l);
+
+			if (nd.used_columns.find(l) == nd.used_columns.end())
+				lambda[l].setUB(0);
+			
+			cout << lambda[l].getUB() << " ";
+		}
+		cout << "\n";
+
+		rmp.solve();
+		
+		while(true)
+		{
+			// Get the dual variables
+			IloNumArray pi(env, n);
+			rmp.getDuals(pi, partition_constraint);
+			
+			// for (size_t i = 0; i < n; i++)
+			// {
+			// 	cout << "Dual variable of constraint " << i << " = " << pi[i] << endl;
+			// }
+			
+			// Build and solve the pricing problem
+			double pricing_obj_val = 0;
+
+			IloModel pricing_model(env);
+			IloBoolVarArray x(env, n);
+			IloExpr pricing_obj(env);
+			IloExpr pricing_weight(env);
+			IloRangeArray capacity_constraint(env);
+			IloCplex pricing_problem;
+
+			pricing_obj += 1;
+			for (int i = 0; i < n; i++)
+			{
+				char var_name[50];
+				sprintf(var_name, "x%d", i);
+	
+				x[i].setName(var_name);
+				pricing_obj += -pi[i] * x[i];
+				pricing_weight += weight[i] * x[i];
+			}
+			capacity_constraint.add(pricing_weight <= capacity);
+	
+			pricing_model.add(capacity_constraint);
+	
+			IloObjective pricing_objective = IloMinimize(env, pricing_obj);
+			pricing_model.add(pricing_objective);
+	
+			pricing_problem = IloCplex(pricing_model);
+			pricing_problem.setOut(env.getNullStream()); // disables CPLEX log
+			pricing_problem.solve();
+	
+			pricing_obj_val = pricing_problem.getObjValue();
+			
+			// cout << "Reduced cost is equal to " << pricing_obj_val << endl;
+			if (pricing_obj_val < -1e-5)
+			{
+				IloNumArray entering_col(env, n);
+
+				pricing_problem.getValues(x, entering_col);
+
+				columns.push_back(vector<bool>(n, 0));
+
+				nd.used_columns.insert(columns.size() - 1);
+				cout << "Entering column:" << endl;
+				for (size_t i = 0; i < n; i++)
+				{
+					cout << (entering_col[i] < 0.5 ? 0 : 1) << " ";
+					columns.back()[i] = (entering_col[i] < 0.5 ? 0 : 1);
+				}
+				cout << "\n";
+
+				// Add the column to the master problem
+				// (the cost of the new variable is always 1)
+				char var_name[50];
+				sprintf(var_name, "y%d", lambda_counter++);
+				IloNumVar new_lambda(master_objective(1) + partition_constraint(entering_col), 0, IloInfinity);
+				// IloNumVar new_lambda2(master_objective(1) + partition_constraint(entering_col), 0, IloInfinity);
+				new_lambda.setName(var_name);
+
+				lambda.add(new_lambda);
+
+				// cout << "Solving the RMP again..." << endl;
+
+				rmp.solve();
+
+				// cout << "New lower bound: " << rmp.getObjValue() << endl;
+
+				// cout << "New solution: ";
+				// for (size_t j = 0; j < lambda.getSize(); j++)
+				// {
+				// 	cout << rmp.getValue(lambda[j]) << " ";
+				// }
+				// cout << endl;
+
+			}
+			else
+			{
+				break;
+			}
+		}
+
+		most_frac = AllInt(rmp, lambda, columns, n, pairs);
+		fraci = most_frac/n; fracj = most_frac%n;
+		cout << fraci << "," << fracj << endl;
+
+		list<Node> tree;
+
+		if (most_frac) {
+			Node n1;
+			n1.used_columns = nd.used_columns;
+			n1.pairs.push_back({{fraci, fracj}, false});
+			n1.LB = rmp.getObjValue();
+			tree.push_back(n1);
+
+			Node n2;
+			n2.used_columns = nd.used_columns;
+			n2.pairs.push_back({{fraci, fracj}, true});
+			n2.LB = rmp.getObjValue();
+			tree.push_back(n2);
+		}
+		else {
+			UB = min(UB, (long long int)round(rmp.getObjValue()));
+			cout << "Found int solution: " << rmp.getObjValue() << "\n";
+		}
+		cout << "\n";
+	}
+
+	cout << "Final solution:\n";
+	for (size_t k = 0; k < lambda.getSize(); k++)
+	{
+		for (size_t j = 0; j < n; j++) {
+			cout << columns[k][j] << " ";
+		}
+		cout << rmp.getValue(lambda[k]) << "\n";
+	}
+	
 	env.end();
 
 	return 0;
 }
+
 /*
 - colocar combo.c
+	- está dando diferente do MIP, tenho que olhar direito depois
 - branching:
 	- calcular valores de x baseados em lambdas
 	- selecionar os 2 x mais fracionários
 	- à esquerda, esses x estão separados (lambdas com eles juntos = 0), add restrição no subproblema
+		- soma dos x tem que dar <= 1
 	- à direita, esses x estão juntos (lambdas com só 1 deles = 0), add restrição no subproblema
+		- x = outro x
 */
