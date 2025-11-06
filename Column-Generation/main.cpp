@@ -64,7 +64,7 @@ void solveMIP() {
 
 int main() 
 {
-	const double M = 1e6;
+	const double M = 1e7;
 	int n = 5;
 	vector<int> weight = {2, 1, 3, 3, 5};
 	int capacity = 7;
@@ -220,7 +220,6 @@ int main()
 			char var_name[50];
 			sprintf(var_name, "y%d", lambda_counter++);
 			IloNumVar new_lambda(master_objective(1) + partition_constraint(entering_col), 0, IloInfinity);
-			// IloNumVar new_lambda2(master_objective(1) + partition_constraint(entering_col), 0, IloInfinity);
 			new_lambda.setName(var_name);
 
 			lambda.add(new_lambda);
@@ -238,9 +237,21 @@ int main()
 			}
 			cout << endl;
 
+			pricing_problem.end();
+			pricing_model.end();
+			capacity_constraint.end();
+			pricing_weight.end();
+			pricing_obj.end();
+			x.end();
 		}
 		else
 		{
+			pricing_problem.end();
+			pricing_model.end();
+			capacity_constraint.end();
+			pricing_weight.end();
+			pricing_obj.end();
+			x.end();
 			// cout << "No column with negative reduced costs found. The current basis is optimal" << endl;
 			// cout << "Final master problem: " << endl;
 			// system("cat model.lp");
@@ -248,35 +259,7 @@ int main()
 		}
 	}
 
-	// Combo solution
-	// 1 0 0 0 0 1 1 1 0  1  0
-	// 0 1 0 0 0 1 1 0 0  0  1
-	// 0 0 1 0 0 0 1 0 1  0  0
-	// 0 0 0 1 0 1 0 1 1  0  0
-	// 0 0 0 0 1 0 0 0 0  1  1
-	//           v v e v  v  v
-	// e - coluna foi repetida
-
 	cout << endl;
-	// cout << "Forcing items 1 and 2 to be separated in the master (for branch-and-price only): " << endl;
-	// 0 1 2 3 4 5 6 7 8 9 10 11
-	//                           
-	// 1 0 0 0 0 1 1 1 0 1  0  0
-	// 0 1 0 0 0 1 1 0 0 0  1  1
-	// 0 0 1 0 0 1 0 1 1 0  0  1
-	// 0 0 0 1 0 0 1 0 1 0  0  1
-	// 0 0 0 0 1 0 0 0 0 1  1  0
-	//           v v v v v  v  f
-	// 0 0 0 0 0 0 0.333333 0.333333 0.666667 0.333333 0.666667 0 
-
-
-	// itens 1 and 2 are together only on columns 5 and 11
-	// lambda[11].setUB(0.0);
-	// lambda[5].setUB(0.0);
-
-	// to allow them again:
-	// lambda[5].setUB(IloInfinity);
-	// lambda[11].setUB(IloInfinity);
 
 	IloNumArray coeffs = IloNumArray(env, lambda.getSize());
 	for (int i = 0; i < lambda.getSize(); i++)
@@ -291,6 +274,7 @@ int main()
 	size_t fraci, fracj;
 	bool all_int = AllInt(rmp, lambda, columns, n, pairs, fraci, fracj);
 	cout << rmp.getObjValue() << " " << fraci << "," << fracj << endl;
+	size_t used_lambdas = 0;
 
 	list<Node> tree;
 
@@ -317,13 +301,13 @@ int main()
 	}
 
 	while (!tree.empty()) {
-		cout << "\n\nNew node: ";
+		cout << "New node: ";
 		Node nd = tree.back();
 		tree.pop_back();
 		for (auto pair = nd.pairs.cbegin(); pair != nd.pairs.cend(); pair++) {
 			cout << pair->second;
 		}
-		cout << "\n";
+		cout << "\t";
 
 		if (ceil(nd.LB) >= UB)
 			continue;
@@ -331,6 +315,8 @@ int main()
 		// for (auto it = nd.used_columns.cbegin(); it != nd.used_columns.cend(); it++)
 		// 	cout << *it << " ";
 		// cout << "\n";
+
+		used_lambdas = 0;
 
 		bool left_right = nd.pairs.back().second;
 		fraci = nd.pairs.back().first.first; fracj = nd.pairs.back().first.second;
@@ -345,10 +331,12 @@ int main()
 
 			if (nd.used_columns.find(l) == nd.used_columns.end())
 				lambda[l].setUB(0);
+			else
+				used_lambdas++;
 			
-			cout << lambda[l].getUB() << " ";
+			// cout << lambda[l].getUB() << " ";
 		}
-		cout << "\n";
+		cout << used_lambdas << "\t";
 		
 		while(rmp.solve())
 		{
@@ -403,7 +391,7 @@ int main()
 	
 			pricing_obj_val = pricing_problem.getObjValue();
 			
-			cout << "Reduced cost is equal to " << pricing_obj_val << "\n";
+			// cout << "Reduced cost is equal to " << pricing_obj_val << "\n";
 			if (pricing_obj_val < -1e-5)
 			{
 				IloNumArray entering_col(env, n);
@@ -413,13 +401,13 @@ int main()
 				columns.push_back(vector<bool>(n, 0));
 
 				nd.used_columns.insert(columns.size() - 1);
-				cout << "Entering column:\n";
+				// cout << "Entering column:\n";
 				for (size_t i = 0; i < n; i++)
 				{
-					cout << (entering_col[i] < 0.5 ? 0 : 1) << " ";
+					// cout << (entering_col[i] < 0.5 ? 0 : 1) << " ";
 					columns.back()[i] = (entering_col[i] < 0.5 ? 0 : 1);
 				}
-				cout << "\n";
+				// cout << "\n";
 
 				// Add the column to the master problem
 				// (the cost of the new variable is always 1)
@@ -429,9 +417,22 @@ int main()
 				new_lambda.setName(var_name);
 
 				lambda.add(new_lambda);
+
+				pricing_problem.end();
+				pricing_model.end();
+				capacity_constraint.end();
+				pricing_weight.end();
+				pricing_obj.end();
+				x.end();
 			}
 			else
 			{
+				pricing_problem.end();
+				pricing_model.end();
+				capacity_constraint.end();
+				pricing_weight.end();
+				pricing_obj.end();
+				x.end();
 				break;
 			}
 		}
