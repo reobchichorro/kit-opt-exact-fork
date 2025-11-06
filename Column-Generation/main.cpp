@@ -278,21 +278,19 @@ int main()
 	// lambda[5].setUB(IloInfinity);
 	// lambda[11].setUB(IloInfinity);
 
-	IloExpr new_sum_obj(env);
-	for (int i = 0; i < n; i++)
+	IloNumArray coeffs = IloNumArray(env, lambda.getSize());
+	for (int i = 0; i < lambda.getSize(); i++)
 	{
-		new_sum_obj += lambda[i];
+		coeffs[i] = 1;
 	}
-	IloObjective new_master_objective = IloMinimize(env, new_sum_obj); 
-	master_model.remove(master_objective);
-	master_model.add(new_master_objective);
+	master_objective.setLinearCoefs(lambda, coeffs);
 
 	rmp.solve();
 
 	vector<vector<double>> pairs(n, vector<double>(n,0));
 	size_t fraci, fracj;
 	bool all_int = AllInt(rmp, lambda, columns, n, pairs, fraci, fracj);
-	cout << fraci << "," << fracj << endl;
+	cout << rmp.getObjValue() << " " << fraci << "," << fracj << endl;
 
 	list<Node> tree;
 
@@ -335,6 +333,7 @@ int main()
 		// cout << "\n";
 
 		bool left_right = nd.pairs.back().second;
+		fraci = nd.pairs.back().first.first; fracj = nd.pairs.back().first.second;
 		for (size_t l = 0; l < lambda.getSize(); l++) {
 			lambda[l].setUB(IloInfinity);
 
@@ -350,10 +349,8 @@ int main()
 			cout << lambda[l].getUB() << " ";
 		}
 		cout << "\n";
-
-		rmp.solve();
 		
-		while(true)
+		while(rmp.solve())
 		{
 			// Get the dual variables
 			IloNumArray pi(env, n);
@@ -429,29 +426,19 @@ int main()
 				char var_name[50];
 				sprintf(var_name, "y%d", lambda_counter++);
 				IloNumVar new_lambda(master_objective(1) + partition_constraint(entering_col), 0, IloInfinity);
-				// IloNumVar new_lambda2(master_objective(1) + partition_constraint(entering_col), 0, IloInfinity);
 				new_lambda.setName(var_name);
 
 				lambda.add(new_lambda);
-
-				// cout << "Solving the RMP again..." << endl;
-
-				rmp.solve();
-
-				// cout << "New lower bound: " << rmp.getObjValue() << endl;
-
-				// cout << "New solution: ";
-				// for (size_t j = 0; j < lambda.getSize(); j++)
-				// {
-				// 	cout << rmp.getValue(lambda[j]) << " ";
-				// }
-				// cout << endl;
-
 			}
 			else
 			{
 				break;
 			}
+		}
+
+		if (rmp.getStatus() == IloAlgorithm::Status::Infeasible) {
+			cout << "\n";
+			continue;
 		}
 
 		all_int = AllInt(rmp, lambda, columns, n, pairs, fraci, fracj);
@@ -479,7 +466,7 @@ int main()
 		cout << "\n";
 	}
 
-	cout << "Final solution:\n";
+	cout << "Final solution: " << rmp.getObjValue() << "\n";
 	for (size_t k = 0; k < lambda.getSize(); k++)
 	{
 		for (size_t j = 0; j < n; j++) {
@@ -498,7 +485,7 @@ int main()
 	- está dando diferente do MIP, tenho que olhar direito depois
 - branching:
 	- calcular valores de x baseados em lambdas
-	- selecionar os 2 x mais fracionários
+	- selecionar o par de x mais fracionário
 	- à esquerda, esses x estão separados (lambdas com eles juntos = 0), add restrição no subproblema
 		- soma dos x tem que dar <= 1
 	- à direita, esses x estão juntos (lambdas com só 1 deles = 0), add restrição no subproblema
