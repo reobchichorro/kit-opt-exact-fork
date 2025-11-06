@@ -76,7 +76,7 @@
 #define PARTITION 1            /* should sort routine partition or sort */
 #define SORTALL   2
 
-#define DET(a1, a2, b1, b2)    ((prod)(a1) * (prod)(b2) - (prod)(a2) * (prod)(b1))
+#define DET(a1, a2, b1, b2)    ((a1) * (prod)(b2) - (a2) * (prod)(b1))
 #define SWAP(a, b)   {  item q; q = *(a); *(a) = *(b); *(b) = q; }
 #define NO(a,p)                ((int) ((p) - (a)->fitem + 1))
 #define DIFF(a,b)              ((int) (((b)+1) - (a)))
@@ -91,10 +91,8 @@
 
 typedef int           boolean; /* logical variable         */
 typedef int           ntype;   /* number of states/items   */
-typedef long          itype;   /* item weights */
-typedef double        ptype;   /* item profits */
-typedef long          stype;   /* sum of weight  */
-typedef double        dtype;   /* sum of profit*/
+typedef long          itype;   /* item profits and weights */
+typedef long          stype;   /* sum of profit or weight  */
 typedef unsigned long btype;   /* binary solution vector   */
 typedef double        prod;    /* product of state, item   */
 
@@ -102,7 +100,7 @@ typedef int (*funcptr) (const void *, const void *);
 
 /* item record */
 typedef struct {
-  ptype   profitofitem;              /* profit                  */
+  itype   p;              /* profit                  */
   itype   w;              /* weight                  */
   boolean x;              /* solution variable       */
     int index;
@@ -116,7 +114,7 @@ typedef struct {
 
 /* state */
 typedef struct {
-  dtype psum;             /* profit sum of state     */
+  stype psum;             /* profit sum of state     */
   stype wsum;             /* weight sum of state     */
   btype vect;             /* corresponding (partial) solution vector */
 } state;
@@ -149,9 +147,9 @@ typedef struct { /* all info for solving separated problem */
   item     *lsort;
   stype    wfsort;
   stype    c;             /* capacity of problem */
-  dtype    z;             /* incumbent solution */
+  stype    z;             /* incumbent solution */
   stype    zwsum;         /* weight sum of incumbent solution */
-  dtype    lb;            /* lower bound */
+  stype    lb;            /* lower bound */
 
   /* solutions may be represented in one of two ways: either a complete */
   /* array of items (fullsol = TRUE), or as last changes in dynamic     */
@@ -164,13 +162,12 @@ typedef struct { /* all info for solving separated problem */
   item     *lfull;        /* end of item array (fullsol=TRUE) */
   partset  d;             /* set of states, including solution */
 
-  dtype    dantzig;       /* dantzig upper bound */
-  dtype    ub;            /* global upper bound */
-  dtype    psumb;         /* profit sum up to break item */
+  stype    dantzig;       /* dantzig upper bound */
+  stype    ub;            /* global upper bound */
+  stype    psumb;         /* profit sum up to break item */
   stype    wsumb;         /* weight sum up to break item */
 
-  dtype    ps, pt;
-  stype    ws, wt;
+  stype    ps, ws, pt, wt;
 
   interval *intv1, *intv2;
   interval *intv1b, *intv2b;
@@ -202,7 +199,7 @@ long dynheur;
 			      forward declarations
    ====================================================================== */
 
-dtype combo(item *f, item *l, stype c, dtype lb, dtype ub,
+stype combo(item *f, item *l, stype c, stype lb, stype ub,
             boolean def, boolean relx);
 
 
@@ -334,8 +331,7 @@ static void improvesol(allinfo *a, state *v)
 static void definesolution(allinfo *a)
 {
    item *i, *h, *m;
-   stype wsum, ws;
-   dtype psum;
+   stype psum, wsum, ws;
   item *f, *l;
   btype j, k;
   long t;
@@ -366,10 +362,10 @@ static void definesolution(allinfo *a)
     k = a->d.ovect & ((btype) 1 << j);
     if (i->x == 1) {
       if (i > f) f = i;
-      if (k) { psum += i->profitofitem; wsum += i->w; i->x = 0; }
+      if (k) { psum += i->p; wsum += i->w; i->x = 0; }
     } else {
       if (i < l) l = i;
-      if (k) { psum -= i->profitofitem; wsum -= i->w; i->x = 1; }
+      if (k) { psum -= i->p; wsum -= i->w; i->x = 1; }
     }
   }
   if ((psum == 0) && (wsum == 0)) return;
@@ -377,8 +373,8 @@ static void definesolution(allinfo *a)
   f++; l--; /* new core */
   psum = a->z; wsum = a->zwsum; iterates++;
   if (f > l) error("wrong backtrack");
-  for (i=a->fitem, m = f; i != m; i++) if (i->x) { psum-=i->profitofitem; wsum-=i->w; }
-  for (i=l+1, m=a->litem+1; i != m; i++) if (i->x) { psum-=i->profitofitem; wsum-=i->w; }
+  for (i=a->fitem, m = f; i != m; i++) if (i->x) { psum-=i->p; wsum-=i->w; }
+  for (i=l+1, m=a->litem+1; i != m; i++) if (i->x) { psum-=i->p; wsum-=i->w; }
   for (i = f, m = l+1, ws = 0; i != m; i++) ws += i->w; 
   if (ws == wsum) { 
     for (i = f, m = l+1; i != m; i++) i->x = 1;
@@ -399,12 +395,12 @@ static void rudidiv(allinfo *a)
    prod pb, wb, q;
    stype ws;
 
-  b = a->b; pb = b->profitofitem; wb = b->w;
+  b = a->b; pb = b->p; wb = b->w;
   q = DET(a->z+1-a->psumb, a->c-a->wsumb, pb, wb);
   x = a->fitem->w; ws = 0;
   for (i = a->fitem, m = a->litem+1; i != m; i++) {
-    if ((i < b) && (DET(-i->profitofitem, -i->w, pb, wb) < q)) { ws += i->w; continue; }
-    if ((i > b) && (DET(i->profitofitem, i->w, pb, wb) < q)) { continue; }
+    if ((i < b) && (DET(-i->p, -i->w, pb, wb) < q)) { ws += i->w; continue; }
+    if ((i > b) && (DET(i->p, i->w, pb, wb) < q)) { continue; }
     y = x; x = i->w;
     while (y != 0) { r = x % y; x = y; y = r; }
     if (x == 1) return;
@@ -419,8 +415,7 @@ static void rudidiv(allinfo *a)
 
 static void partsort(allinfo *a, item *f, item *l, stype ws, stype c, int what)
 {
-   itype mw;
-   ptype mp;
+   itype mp, mw;
    item *i, *j, *m;
    stype wi;
   int d;
@@ -428,20 +423,20 @@ static void partsort(allinfo *a, item *f, item *l, stype ws, stype c, int what)
   d = l - f + 1;
   if (d > 1) {
     m = f + d / 2;
-    if (DET(f->profitofitem, f->w, m->profitofitem, m->w) < 0) SWAP(f, m);
+    if (DET(f->p, f->w, m->p, m->w) < 0) SWAP(f, m);
     if (d > 2) {
-      if (DET(m->profitofitem, m->w, l->profitofitem, l->w) < 0) {
+      if (DET(m->p, m->w, l->p, l->w) < 0) {
         SWAP(m, l);
-        if (DET(f->profitofitem, f->w, m->profitofitem, m->w) < 0) SWAP(f, m);
+        if (DET(f->p, f->w, m->p, m->w) < 0) SWAP(f, m);
       }
     }
   }
 
   if (d > 3) {
-    mp = m->profitofitem; mw = m->w; i = f; j = l; wi = ws;
+    mp = m->p; mw = m->w; i = f; j = l; wi = ws;
     for (;;) {
-      do { wi += i->w; i++; } while (DET(i->profitofitem, i->w, mp, mw) > 0);
-      do {             j--; } while (DET(j->profitofitem, j->w, mp, mw) < 0);
+      do { wi += i->w; i++; } while (DET(i->p, i->w, mp, mw) > 0);
+      do {             j--; } while (DET(j->p, j->w, mp, mw) < 0);
       if (i > j) break;
       SWAP(i, j);
     }
@@ -504,33 +499,33 @@ static item *minweights(item *f, item *l, stype c)
 				maxprofits
    ====================================================================== */
 
-static item *maxprofits(item *f, item *l, dtype z)
+static item *maxprofits(item *f, item *l, stype z)
 {
-   ptype mp;
+   itype mp;
    item *i, *j, *m;
-   dtype ps;
+   stype ps;
   int d;
 
   for (;;) {
     d = l - f + 1;
     if (d > 1) {
       m = f + d / 2;
-      if (f->profitofitem < m->profitofitem) SWAP(f, m);
+      if (f->p < m->p) SWAP(f, m);
       if (d > 2) {
-        if (m->profitofitem < l->profitofitem) { SWAP(m, l); if (f->profitofitem < m->profitofitem) SWAP(f, m); }
+        if (m->p < l->p) { SWAP(m, l); if (f->p < m->p) SWAP(f, m); }
       }
     }
     if (d <= 3) break;
-    mp = m->profitofitem; i = f; j = l; ps = 0;
+    mp = m->p; i = f; j = l; ps = 0;
     for (;;) {
-      do { ps += i->profitofitem; i++; } while (i->profitofitem > mp);
-      do {             j--; } while (j->profitofitem < mp);
+      do { ps += i->p; i++; } while (i->p > mp);
+      do {             j--; } while (j->p < mp);
       if (i > j) break;
       SWAP(i, j);
     }
     if (ps <= z) { f = i; z -= ps; } else l = i-1;
   }
-  while (f->profitofitem <= z) { z -= f->profitofitem; f++; }
+  while (f->p <= z) { z -= f->p; f++; }
   return f;
 }
 
@@ -540,16 +535,15 @@ static item *maxprofits(item *f, item *l, dtype z)
    ====================================================================== */
 
 static void sursort(item *f, item *l, itype sur, stype c,
-             dtype *p1, stype *w1, item **b)
+             stype *p1, stype *w1, item **b)
 {
    itype s;
    prod mp, mw;
    item *i, *j, *m;
-   stype ws;
-   dtype ps;
+   stype ws, ps;
   static item nn;
   item *l1;
-  dtype psum;
+  stype psum;
   int d;
 
   psum = 0; s = sur; l1 = l + 1;
@@ -557,18 +551,18 @@ static void sursort(item *f, item *l, itype sur, stype c,
     d = l - f + 1;
     if (d > 1) {
       m = f + d / 2;
-      if (DET(f->profitofitem, f->w+s, m->profitofitem, m->w+s) < 0) SWAP(f, m);
+      if (DET(f->p, f->w+s, m->p, m->w+s) < 0) SWAP(f, m);
       if (d > 2) {
-        if (DET(m->profitofitem, m->w+s, l->profitofitem, l->w+s) < 0) {
-          SWAP(m, l); if (DET(f->profitofitem, f->w+s, m->profitofitem, m->w+s) < 0) SWAP(f, m);
+        if (DET(m->p, m->w+s, l->p, l->w+s) < 0) {
+          SWAP(m, l); if (DET(f->p, f->w+s, m->p, m->w+s) < 0) SWAP(f, m);
         }
       }
     }
     if (d <= 3) break;
-    mp = m->profitofitem; mw = m->w+s; i = f; j = l; ws = ps = 0;
+    mp = m->p; mw = m->w+s; i = f; j = l; ws = ps = 0;
     for (;;) {
-      do { ws+=i->w+s; ps+=i->profitofitem; i++; } while (DET(i->profitofitem,i->w+s,mp,mw) > 0);
-      do {                       j--; } while (DET(j->profitofitem,j->w+s,mp,mw) < 0);
+      do { ws+=i->w+s; ps+=i->p; i++; } while (DET(i->p,i->w+s,mp,mw) > 0);
+      do {                       j--; } while (DET(j->p,j->w+s,mp,mw) < 0);
       if (i > j) break;
       SWAP(i, j);
     }
@@ -576,9 +570,9 @@ static void sursort(item *f, item *l, itype sur, stype c,
   }
   for ( ; f != l1; f++) {
     if (f->w+s > c) { *p1 = psum; *w1 = c; *b  = f; return; }
-    c -= f->w+s; psum += f->profitofitem;
+    c -= f->w+s; psum += f->p;
   }
-  nn.profitofitem = 0; nn.w = 1; *p1 = psum; *w1 = c; *b  = &nn;
+  nn.p = 0; nn.w = 1; *p1 = psum; *w1 = c; *b  = &nn;
 }
 
 
@@ -588,11 +582,9 @@ static void sursort(item *f, item *l, itype sur, stype c,
 
 static boolean haschance(allinfo *a, item *i, int side)
 {
-   itype w;
-   ptype p;
+   itype p, w;
    state *j, *m;
-   dtype pp;
-   stype ww;
+   stype pp, ww;
 
   if (a->d.size == 0) return FALSE;
 
@@ -615,11 +607,11 @@ static boolean haschance(allinfo *a, item *i, int side)
   pireduced++;
   return FALSE;
 #else
-  p = a->b->profitofitem; w = a->b->w;
+  p = a->b->p; w = a->b->w;
   if (side == LEFT) {
-    return (DET(a->psumb - i->profitofitem - a->z-1, a->wsumb - i->w - a->c, p, w) >= 0);
+    return (DET(a->psumb - i->p - a->z-1, a->wsumb - i->w - a->c, p, w) >= 0);
   } else {
-    return (DET(a->psumb + i->profitofitem - a->z-1, a->wsumb + i->w - a->c, p, w) >= 0);
+    return (DET(a->psumb + i->p - a->z-1, a->wsumb + i->w - a->c, p, w) >= 0);
   }
 #endif
 }
@@ -651,14 +643,13 @@ static void moveset(allinfo *a)
 static void multiply(allinfo *a, item *h, int side)
 {
    state *i, *j, *k, *m;
-   itype w;
-   ptype p;
+   itype p, w;
    btype mask0, mask1;
   state *r1, *rm;
   partset *d;
 
   d = &a->d; if (d->size == 0) return;
-  if (side == RIGHT) { p = h->profitofitem; w = h->w; } else { p = -h->profitofitem; w = -h->w; }
+  if (side == RIGHT) { p = h->p; w = h->w; } else { p = -h->p; w = -h->w; }
 
   /* keep track on solution vector */
   d->vno++; if (d->vno == MAXV) d->vno = 0;
@@ -705,11 +696,10 @@ static void multiply(allinfo *a, item *h, int side)
    ====================================================================== */
 
 static void surbin(item *f, item *l, itype s1, itype s2, stype c, 
-                   dtype dantzig, ntype card, stype *sur, stype *u)
+                   stype dantzig, ntype card, stype *sur, stype *u)
 {
   item *b;
-  stype csur, r, s, d, suropt;
-  dtype psum;
+  stype csur, r, psum, s, d, suropt;
   double ua, ub, gr, e, uopt;
 
   /* iterate surr. multiplier */
@@ -722,8 +712,8 @@ static void surbin(item *f, item *l, itype s1, itype s2, stype c,
 
     /* derive bound and gradient */
     e = 1; d = b-f;
-    ua = psum + r * (prod) b->profitofitem / (b->w+s);
-    ub = psum + (r + (card-d)*e) * (prod) b->profitofitem / (b->w+s+e);
+    ua = psum + r * (prod) b->p / (b->w+s);
+    ub = psum + (r + (card-d)*e) * (prod) b->p / (b->w+s+e);
     gr = (ub - ua) / e;
 
     if (ua < uopt) { suropt = s; uopt = ua; }
@@ -738,7 +728,7 @@ static void surbin(item *f, item *l, itype s1, itype s2, stype c,
    ====================================================================== */
 
 static void solvesur(allinfo *a, item *f, item *l, stype minsur, stype maxsur, 
-              ntype card, dtype *ub)
+              ntype card, stype *ub)
 {
    item *i, *k, *m;
    stype ps, csur;
@@ -760,7 +750,7 @@ static void solvesur(allinfo *a, item *f, item *l, stype minsur, stype maxsur,
   csur = a->c + sur * (long) card; ps = 0;
   for (i = f, k = f, m = l+1; i != m; i++) {
     i->w += sur; i->x = 0;
-    if (i->w <= 0) { ps += i->profitofitem; csur -= i->w; i->x = 1; SWAP(i, k); k++; }
+    if (i->w <= 0) { ps += i->p; csur -= i->w; i->x = 1; SWAP(i, k); k++; }
   }
 
   /* solve problem to optimality */
@@ -790,10 +780,8 @@ static void surrelax(allinfo *a)
    item *i, *j, *m;
   item *f, *l, *b;
   ntype n, card1, card2, b1;
-  stype minsur, maxsur, wsum;
-  dtype u;
-  itype minw, maxw;
-  ptype maxp;
+  stype u, minsur, maxsur, wsum;
+  itype minw, maxp, maxw;
   long t1, t2;
 
   /* copy table */
@@ -807,7 +795,7 @@ static void surrelax(allinfo *a)
     *j = *i; wsum += i->w; 
     if (i->w < minw) minw = i->w;
     if (i->w > maxw) maxw = i->w;
-    if (i->profitofitem > maxp) maxp = i->profitofitem;
+    if (i->p > maxp) maxp = i->p;
   }
 
   /* find cardinality */
@@ -863,13 +851,13 @@ static void simpreduce(int side, item **f, item **l, allinfo *a)
   if (a->d.size == 0) { *f = *l+1; return; }
   if (*l < *f) return;
 
-  pb = a->b->profitofitem; wb = a->b->w;
+  pb = a->b->p; wb = a->b->w;
   q = DET(a->z+1-a->psumb, a->c-a->wsumb, pb, wb);
   i = *f; j = *l; red = 0;
   if (side == LEFT) {
     k = a->fsort - 1;
     while (i != j+1) {
-      if (DET(-j->profitofitem, -j->w, pb, wb) < q) {
+      if (DET(-j->p, -j->w, pb, wb) < q) {
 	SWAP(i, j); i++;       /* not feasible */
 	red++;
       } else {
@@ -880,7 +868,7 @@ static void simpreduce(int side, item **f, item **l, allinfo *a)
   } else {
     k = a->lsort + 1;
     while (i != j+1) {
-      if (DET(i->profitofitem, i->w, pb, wb) < q) {
+      if (DET(i->p, i->w, pb, wb) < q) {
         SWAP(i, j); j--;       /* not feasible */
 	red++;
       } else {
@@ -931,14 +919,14 @@ static void expandcore(allinfo *a, boolean *atstart, boolean *atend)
     if (a->intv1 == a->intv1b) {
       *atstart = TRUE;
     } else {
-      pop(a, LEFT, &f, &l); a->ps = f->profitofitem; a->ws = f->w;
+      pop(a, LEFT, &f, &l); a->ps = f->p; a->ws = f->w;
       simpreduce(LEFT, &f, &l, a);
       if (f != l+1) {
 	partsort(a, f, l, 0, 0, SORTALL); a->fsort = f;
-	a->ps = a->s->profitofitem; a->ws = a->s->w;
+	a->ps = a->s->p; a->ws = a->s->w;
       }
     }
-  } else { a->ps = a->s->profitofitem; a->ws = a->s->w; }
+  } else { a->ps = a->s->p; a->ws = a->s->w; }
 
   /* expand core */
   *atend = FALSE;
@@ -946,14 +934,14 @@ static void expandcore(allinfo *a, boolean *atstart, boolean *atend)
     if (a->intv2 == a->intv2b) {
       *atend = TRUE;
     } else {
-      pop(a, RIGHT, &f, &l); a->pt = l->profitofitem; a->wt = l->w;
+      pop(a, RIGHT, &f, &l); a->pt = l->p; a->wt = l->w;
       simpreduce(RIGHT, &f, &l, a);
       if (f != l+1) {
 	partsort(a, f, l, 0, 0, SORTALL); a->lsort = l;
-	a->pt = a->t->profitofitem; a->wt = a->t->w;
+	a->pt = a->t->p; a->wt = a->t->w;
       }
     }
-  } else { a->pt = a->t->profitofitem; a->wt = a->t->w; }
+  } else { a->pt = a->t->p; a->wt = a->t->w; }
 }
 
 
@@ -1084,8 +1072,7 @@ static void swapout(allinfo *a, item *i, int side)
 inline void findcore(allinfo *a)
 {
    item *i, *m;
-   itype r;
-   ptype p;
+   itype p, r;
   item *j, *s, *t, *b;
 
   /* all items apart from b must be in intervals */
@@ -1101,7 +1088,7 @@ inline void findcore(allinfo *a)
   if (b-1 >= a->fitem) {
     p = 0; r = a->c - a->wsumb + (b-1)->w;
     for (i = t+1, m = a->litem+1, j = NULL; i != m; i++) {
-      if ((i->w <= r) && (i->profitofitem > p)) { p = i->profitofitem; j = i; }
+      if ((i->w <= r) && (i->p > p)) { p = i->p; j = i; }
     }
     if (j != NULL) { swapout(a, j, RIGHT); t++; }
   }
@@ -1110,7 +1097,7 @@ inline void findcore(allinfo *a)
   if (TRUE) {
     p = 0; r = a->c - a->wsumb;
     for (i = t+1, m = a->litem+1, j = NULL; i != m; i++) {
-      if ((i->w <= r) && (i->profitofitem > p)) { p = i->profitofitem; j = i; }
+      if ((i->w <= r) && (i->p > p)) { p = i->p; j = i; }
     }
     if (j != NULL) { swapout(a, j, RIGHT); t++; }
   }
@@ -1118,16 +1105,16 @@ inline void findcore(allinfo *a)
   /* backward greedy solution */
   if (TRUE) {
     j = NULL; r = a->wsumb - a->c + b->w;
-    for (i = a->fitem, m = s; i != m; i++) if (i->w >= r) { p = i->profitofitem+1; break; }
-    for (; i != m; i++) if ((i->w >= r) && (i->profitofitem < p)) { p = i->profitofitem; j = i; }
+    for (i = a->fitem, m = s; i != m; i++) if (i->w >= r) { p = i->p+1; break; }
+    for (; i != m; i++) if ((i->w >= r) && (i->p < p)) { p = i->p; j = i; }
     if (j != NULL) { swapout(a, j, LEFT); s--; }
   }
 
   /* second backward solution */
   if (b+1 <= a->litem) {
     j = NULL; r = a->wsumb - a->c + b->w + (b+1)->w;
-    for (i = a->fitem, m = s; i != m; i++) if (i->w >= r) { p = i->profitofitem+1; break; }
-    for (; i != m; i++) if ((i->w >= r) && (i->profitofitem < p)) { p = i->profitofitem; j = i; }
+    for (i = a->fitem, m = s; i != m; i++) if (i->w >= r) { p = i->p+1; break; }
+    for (; i != m; i++) if ((i->w >= r) && (i->p < p)) { p = i->p; j = i; }
     if (j != NULL) { swapout(a, j, LEFT); s--; }
   }
 
@@ -1154,8 +1141,7 @@ inline void findcore(allinfo *a)
 static void heuristic(allinfo *a)
 {
    item *i, *j, *m;
-   stype c;
-   dtype z, ub;
+   stype c, z, ub;
    state *v, *r1, *rm;
   item *red, d;
 
@@ -1171,7 +1157,7 @@ static void heuristic(allinfo *a)
     red = (a->intv2+1)->f;
     for (i = red, m = a->litem+1, j = NULL; i != m; i++) {
       v = findvect(c - i->w, r1, rm); if (v == NULL) continue;
-      if (v->psum+i->profitofitem > z) { j = i; z = v->psum+i->profitofitem; if (z == ub) break; }
+      if (v->psum+i->p > z) { j = i; z = v->psum+i->p; if (z == ub) break; }
     }
     if (j != NULL) {
       swapout(a, j, RIGHT); d = *red;
@@ -1187,7 +1173,7 @@ static void heuristic(allinfo *a)
     red = (a->intv1-1)->l;
     for (i = a->fitem, m = red+1, j = NULL; i != m; i++) {
       v = findvect(c + i->w, r1, rm); if (v == NULL) continue;
-      if (v->psum-i->profitofitem > z) { j = i; z = v->psum-i->profitofitem; if (z == ub) break; }
+      if (v->psum-i->p > z) { j = i; z = v->psum-i->p; if (z == ub) break; }
     }
     if (j != NULL) {
       swapout(a, j, LEFT); d = *red;
@@ -1212,13 +1198,13 @@ static void findbreak(allinfo *a)
 
   /* find break item */
   psum = 0; r = a->c;
-  for (i = a->fitem; i->w <= r; i++) { psum += i->profitofitem; r -= i->w; }
+  for (i = a->fitem; i->w <= r; i++) { psum += i->p; r -= i->w; }
   wsum = a->c - r;
 
   a->b       = i;
   a->psumb   = psum;
   a->wsumb   = wsum;
-  a->dantzig = psum + (r * (prod) i->profitofitem) / i->w;
+  a->dantzig = psum + (r * (prod) i->p) / i->w;
 }
 
 
@@ -1226,7 +1212,7 @@ static void findbreak(allinfo *a)
 				combo
    ====================================================================== */
 
-inline extern dtype combo(item *f, item *l, stype c, dtype lb, dtype ub,
+inline extern stype combo(item *f, item *l, stype c, stype lb, stype ub,
             boolean def, boolean relx)
 /* f,l : first, last item                                               */
 /* c   : capacity of knapsack                                           */

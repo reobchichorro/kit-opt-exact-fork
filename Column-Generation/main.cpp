@@ -68,7 +68,7 @@ int main()
 	int n = 5;
 	vector<int> weight = {2, 1, 3, 3, 5};
 	int capacity = 7;
-	bool use_mip = true;
+	bool use_mip = false;
 
 	cin >> n >> capacity;
 	weight = vector<int>(n);
@@ -83,7 +83,7 @@ int main()
 	for (int i = 0; i < n; i++)
 	{
 		items[i].w = weight[i];
-		items[i].profitofitem = M;
+		items[i].p = M;
 		items[i].x = 0;
 		items[i].index = i;
 		columns[i][i] = 1;
@@ -135,10 +135,10 @@ int main()
 		IloNumArray pi(env, n);
 		rmp.getDuals(pi, partition_constraint);
 
-		for (size_t i = 0; i < n; i++)
-		{
-			cout << "Dual variable of constraint " << i << " = " << pi[i] << endl;
-		}
+		// for (size_t i = 0; i < n; i++)
+		// {
+		// 	cout << "Dual variable of constraint " << i << " = " << pi[i] << endl;
+		// }
 		
 		// Build and solve the pricing problem
 		double pricing_obj_val = 0;
@@ -177,12 +177,12 @@ int main()
 			for (int i = 0; i < n; i++)
 			{
 				items[i].w = weight[i];
-				items[i].profitofitem = max(pi[i],0.0);
+				items[i].p = max(pi[i],0.0)*M;
 				items[i].x = 0;
 				items[i].index = i;
 			}
 
-			pricing_obj_val = 1-combo(&items[0], &items[n-1], capacity, 0, 0, true, false);
+			pricing_obj_val = 1-(combo(&items[0], &items[n-1], capacity, 0, 0, true, false)/M);
 		}
 		
 		cout << "Reduced cost is equal to " << pricing_obj_val << endl;
@@ -466,7 +466,6 @@ int main()
 		cout << "\n";
 	}
 
-	cout << "Final solution: " << rmp.getObjValue() << "\n";
 	for (size_t k = 0; k < lambda.getSize(); k++)
 	{
 		for (size_t j = 0; j < n; j++) {
@@ -474,6 +473,7 @@ int main()
 		}
 		cout << rmp.getValue(lambda[k]) << "\n";
 	}
+	cout << "Final solution: " << rmp.getObjValue() << "\n";
 	
 	env.end();
 
