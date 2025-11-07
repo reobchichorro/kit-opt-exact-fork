@@ -185,12 +185,9 @@ int main()
 			pricing_obj_val = 1-(combo(&items[0], &items[n-1], capacity, 0, 0, true, false)/M);
 		}
 		
-		cout << "Reduced cost is equal to " << pricing_obj_val << endl;
+		// cout << "Reduced cost is equal to " << pricing_obj_val << endl;
 		if (pricing_obj_val < -1e-5)
 		{
-
-			// cout << "Reduced cost is equal to " << pricing_obj_val << ", which is less than 0..." << endl;
-
 			IloNumArray entering_col(env, n);
 
 			if (use_mip)
@@ -207,7 +204,7 @@ int main()
 			}
 
 			columns.push_back(vector<bool>(n, 0));
-			cout << endl << "Entering column:" << endl;
+			cout << "Entering column: ";
 			for (size_t i = 0; i < n; i++)
 			{
 				cout << (entering_col[i] < 0.5 ? 0 : 1) << " ";
@@ -224,18 +221,14 @@ int main()
 
 			lambda.add(new_lambda);
 
-			cout << "Solving the RMP again..." << endl;
-
 			rmp.solve();
 
-			cout << "New lower bound: " << rmp.getObjValue() << endl;
-
-			cout << "New solution: ";
-			for (size_t j = 0; j < lambda.getSize(); j++)
-			{
-				cout << rmp.getValue(lambda[j]) << " ";
-			}
-			cout << endl;
+			// cout << "New solution: ";
+			// for (size_t j = 0; j < lambda.getSize(); j++)
+			// {
+			// 	cout << rmp.getValue(lambda[j]) << " ";
+			// }
+			// cout << endl;
 
 			pricing_problem.end();
 			pricing_model.end();
@@ -273,8 +266,7 @@ int main()
 	vector<vector<double>> pairs(n, vector<double>(n,0));
 	size_t fraci, fracj;
 	bool all_int = AllInt(rmp, lambda, columns, n, pairs, fraci, fracj);
-	cout << rmp.getObjValue() << " " << fraci << "," << fracj << endl;
-	size_t used_lambdas = 0;
+	cout << "Root lower bound: " << rmp.getObjValue() << endl;
 
 	list<Node> tree;
 
@@ -301,22 +293,22 @@ int main()
 	}
 
 	while (!tree.empty()) {
-		cout << "New node: ";
 		Node nd = tree.back();
+		cout << "New node. LB: " << nd.LB;
 		tree.pop_back();
-		for (auto pair = nd.pairs.cbegin(); pair != nd.pairs.cend(); pair++) {
-			cout << pair->second;
-		}
-		cout << "\t";
+		// for (auto pair = nd.pairs.cbegin(); pair != nd.pairs.cend(); pair++) {
+		// 	cout << pair->second;
+		// }
+		cout << " Node depth: " << nd.pairs.size();
 
-		if (ceil(nd.LB) >= UB)
+		if (ceil(nd.LB) >= UB) {
+			cout << endl;
 			continue;
+		}
 
 		// for (auto it = nd.used_columns.cbegin(); it != nd.used_columns.cend(); it++)
 		// 	cout << *it << " ";
 		// cout << "\n";
-
-		used_lambdas = 0;
 
 		bool left_right = nd.pairs.back().second;
 		fraci = nd.pairs.back().first.first; fracj = nd.pairs.back().first.second;
@@ -331,12 +323,8 @@ int main()
 
 			if (nd.used_columns.find(l) == nd.used_columns.end())
 				lambda[l].setUB(0);
-			else
-				used_lambdas++;
-			
-			// cout << lambda[l].getUB() << " ";
 		}
-		cout << used_lambdas << "\t";
+		cout << " Used columns: " << nd.used_columns.size();
 		
 		while(rmp.solve())
 		{
@@ -438,12 +426,12 @@ int main()
 		}
 
 		if (rmp.getStatus() == IloAlgorithm::Status::Infeasible) {
-			cout << "\n";
+			cout << endl;
 			continue;
 		}
 
 		all_int = AllInt(rmp, lambda, columns, n, pairs, fraci, fracj);
-		cout << fraci << "," << fracj << "\n";
+		cout << endl;
 
 		if (!all_int) {
 			Node n1;
@@ -462,9 +450,8 @@ int main()
 		}
 		else {
 			UB = min(UB, (long long int)round(rmp.getObjValue()));
-			cout << "Found int solution: " << rmp.getObjValue() << "\n";
+			cout << "Found int solution: " << rmp.getObjValue() << endl;
 		}
-		cout << "\n";
 	}
 
 	for (size_t k = 0; k < lambda.getSize(); k++)
